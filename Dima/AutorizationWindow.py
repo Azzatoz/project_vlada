@@ -13,7 +13,7 @@ class Ui_AuthorizationWindow(object):
     # Конструктор класса
     def __init__(self):
         # Создание окна приложения
-        self.authorizationWindow = QtWidgets.QMainWindow()
+        self.authorizationWindow = QtWidgets.QDialog()
         self.authorizationWindow.setObjectName("AuthorizationWindow")
         self.authorizationWindow.resize(1620, 960)
         # Создание центрального виджета

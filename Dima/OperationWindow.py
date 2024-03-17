@@ -8,9 +8,11 @@ class Ui_OperationWindow(object):
         self.operationWindow = QtWidgets.QDialog()
         self.operationWindow.setObjectName("OperationWindow")
         self.operationWindow.resize(1620, 960)
-        self.verticalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
+
+        self.verticalLayoutWidget = QtWidgets.QWidget(self.operationWindow)
         self.verticalLayoutWidget.setGeometry(QtCore.QRect(100, 60, 1400, 860))
         self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
+
         self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
@@ -42,14 +44,6 @@ class Ui_OperationWindow(object):
         self.cancel_button.setObjectName("cancel_button")
         self.horizontalLayout.addWidget(self.cancel_button)
         self.verticalLayout.addLayout(self.horizontalLayout)
-        self.operationWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QtWidgets.QMenuBar(self.operationWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1620, 21))
-        self.menubar.setObjectName("menubar")
-        self.operationWindow.setMenuBar(self.menubar)
-        self.statusbar = QtWidgets.QStatusBar(self.operationWindow)
-        self.statusbar.setObjectName("statusbar")
-        self.operationWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(self.operationWindow)
         QtCore.QMetaObject.connectSlotsByName(self.operationWindow)
@@ -72,15 +66,15 @@ class Ui_OperationWindow(object):
     def show(self):
         self.operationWindow.show()
 
-    def set_button_text(self, operation_type):
+    def operation_window(self, operation_type):
         if operation_type == "списать":
-            self.choose_button.setText("Списать")
+            ui_table = Ui_OperationWindow("таблица_для_списания")
         elif operation_type == "продать":
-            self.choose_button.setText("продать...")
-            # выбор клиента, если клиента нет - добавить
+            ui_table = Ui_OperationWindow("таблица_для_продажи")
         elif operation_type == "переместить":
-            # выбор склада куда переместить товар
-            self.choose_button.setText("Выбрать товар для перемещения")
+            ui_table = Ui_OperationWindow("таблица_для_перемещения")
+
+        ui_table.show()
 
 
 if __name__ == "__main__":

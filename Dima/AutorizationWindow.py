@@ -1,5 +1,6 @@
 import sqlite3
 from PyQt5 import QtCore, QtWidgets
+from Vlada.MainWindow import UiMainWindow
 
 
 def show_notification(message):
@@ -11,29 +12,28 @@ def show_notification(message):
 class Ui_AuthorizationWindow(object):
 
     # Конструктор класса
-    def __init__(self):
+    def __init__(self, authorization_dialog):
         # Создание окна приложения
-        self.authorizationWindow = QtWidgets.QDialog()
-        self.authorizationWindow.setObjectName("AuthorizationWindow")
-        self.authorizationWindow.resize(1620, 960)
-        # Создание центрального виджета
-        self.centralwidget = QtWidgets.QWidget(self.authorizationWindow)
-        self.centralwidget.setObjectName("centralwidget")
+        self.authorization_dialog = authorization_dialog
+        self.authorization_dialog.setObjectName("AuthorizationWindow")
+        self.authorization_dialog.resize(1620, 960)
+
         # Создание вертикального макета
-        self.verticalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
+        self.verticalLayoutWidget = QtWidgets.QWidget(self.authorization_dialog)
         self.verticalLayoutWidget.setGeometry(QtCore.QRect(620, 255, 400, 400))
         self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
+
         # Создание элементов управления
         self.Name_of_project = QtWidgets.QLabel(self.verticalLayoutWidget)
-        # Установка свойств элементов управления
         self.Name_of_project.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.Name_of_project.setAutoFillBackground(False)
         self.Name_of_project.setAlignment(QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop)
         self.Name_of_project.setObjectName("Name_of_project")
         self.verticalLayout.addWidget(self.Name_of_project)
+
         spacerItem = QtWidgets.QSpacerItem(20, 500, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem)
         self.label_1 = QtWidgets.QLabel(self.verticalLayoutWidget)
@@ -76,12 +76,6 @@ class Ui_AuthorizationWindow(object):
         self.BirthDate.setObjectName("BirthDate")
         self.BirthDate.setVisible(False)
         self.verticalLayout.addWidget(self.BirthDate)
-        # self.label_6 = QtWidgets.QLabel(self.verticalLayoutWidget)
-        # self.label_6.setObjectName("label_6")
-        # self.verticalLayout.addWidget(self.label_6)
-        # self.Position = QtWidgets.QLineEdit(self.verticalLayoutWidget)
-        # self.Position.setObjectName("Position")
-        # self.verticalLayout.addWidget(self.Position)
         self.label_7 = QtWidgets.QLabel(self.verticalLayoutWidget)
         self.label_7.setObjectName("label_7")
         self.verticalLayout.addWidget(self.label_7)
@@ -105,35 +99,25 @@ class Ui_AuthorizationWindow(object):
         self.LogUp.clicked.connect(self.register)
         self.horizontalLayout.addWidget(self.LogUp)
         self.verticalLayout.addLayout(self.horizontalLayout)
-        self.authorizationWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QtWidgets.QMenuBar(self.authorizationWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1620, 21))
-        self.menubar.setObjectName("menubar")
-        self.authorizationWindow.setMenuBar(self.menubar)
-        self.statusbar = QtWidgets.QStatusBar(self.authorizationWindow)
-        self.statusbar.setObjectName("statusbar")
-        self.authorizationWindow.setStatusBar(self.statusbar)
+        self.retranslateUi(self.authorization_dialog)
+        QtCore.QMetaObject.connectSlotsByName(self.authorization_dialog)
 
-        self.retranslateUi(self.authorizationWindow)
-        QtCore.QMetaObject.connectSlotsByName(self.authorizationWindow)
-
-    def retranslateUi(self, AuthorizationWindow):
+    def retranslateUi(self, authorization_dialog):
         _translate = QtCore.QCoreApplication.translate
-        AuthorizationWindow.setWindowTitle(_translate("authorizationWindow", "Главное окно"))
+        authorization_dialog.setWindowTitle(_translate("authorizationWindow", "Авторизация"))
         self.Name_of_project.setText(_translate("authorizationWindow", "Название"))
         self.label_1.setText(_translate("authorizationWindow", "Имя"))
         self.label_2.setText(_translate("authorizationWindow", "Фамилия"))
         self.label_3.setText(_translate("authorizationWindow", "Отчество"))
         self.label_4.setText(_translate("authorizationWindow", "Телефон"))
         self.label_5.setText(_translate("authorizationWindow", "Дата рождения"))
-        # self.label_6.setText(_translate("authorizationWindow", "Должность"))
         self.label_7.setText(_translate("authorizationWindow", "Логин"))
         self.label_8.setText(_translate("authorizationWindow", "Пароль"))
         self.LogIn.setText(_translate("authorizationWindow", "Войти"))
         self.LogUp.setText(_translate("authorizationWindow", "Зарегистрироваться"))
 
     def show(self):
-        self.authorizationWindow.show()
+        self.authorization_dialog.show()
 
     def login(self):
         username = self.Username.text()
@@ -151,10 +135,9 @@ class Ui_AuthorizationWindow(object):
         conn.close()
 
         if result:
-            show_notification("Успешный вход")
-            # Открытие следующего окна после успешного входа
-            # next_window = NextWindow()
-            # next_window.show()
+            main_window = UiMainWindow()  # Создаем экземпляр UiMainWindow
+            main_window.show()  # Показываем основное окно
+            # self.authorization_dialog.accept()  # Закрываем окно авторизации
         else:
             show_notification("Неверное имя пользователя или пароль")
 
@@ -261,6 +244,7 @@ if __name__ == "__main__":
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
-    ui = Ui_AuthorizationWindow()
-    ui.show()
+    AutorizationDialog = QtWidgets.QDialog
+    ui_autorization_dialog = Ui_AuthorizationWindow(AutorizationDialog)
+    ui_autorization_dialog.show()
     sys.exit(app.exec_())

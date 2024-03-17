@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets
 from my.vlada.db import create_database, generate_data
-from Dima.AutorizationWindow import Ui_AuthorizationWindow
+from Files_Dima.AutorizationWindow import Ui_AuthorizationWindow
 
 # Создание базы данных
 create_database()

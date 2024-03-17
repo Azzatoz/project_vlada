@@ -15,7 +15,7 @@ class Ui_AuthorizationWindow(object):
         # Создание окна приложения
         self.authorizationWindow = QtWidgets.QMainWindow()
         self.authorizationWindow.setObjectName("AuthorizationWindow")
-        self.authorizationWindow.resize(1620, 1080)
+        self.authorizationWindow.resize(1620, 960)
         # Создание центрального виджета
         self.centralwidget = QtWidgets.QWidget(self.authorizationWindow)
         self.centralwidget.setObjectName("centralwidget")

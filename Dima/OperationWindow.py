@@ -3,7 +3,6 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 class Ui_OperationWindow(object):
-
     def __init__(self, table_name):
         self.operationWindow = QtWidgets.QDialog()
         self.operationWindow.setObjectName("OperationWindow")
@@ -66,21 +65,20 @@ class Ui_OperationWindow(object):
     def show(self):
         self.operationWindow.show()
 
-    def operation_window(self, operation_type):
+    def set_info(self, operation_type):
         if operation_type == "списать":
-            ui_table = Ui_OperationWindow("таблица_для_списания")
+            self.choose_button.setText("Списать")
         elif operation_type == "продать":
-            ui_table = Ui_OperationWindow("таблица_для_продажи")
+            self.choose_button.setText("продать...")
+            # выбор клиента, если клиента нет - добавить
         elif operation_type == "переместить":
-            ui_table = Ui_OperationWindow("таблица_для_перемещения")
-
-        ui_table.show()
+            # выбор склада куда переместить товар
+            self.choose_button.setText("Выбрать товар для перемещения")
 
 
 if __name__ == "__main__":
     import sys
-
     app = QtWidgets.QApplication(sys.argv)
-    ui = Ui_OperationWindow("Current_product")
+    ui = Ui_OperationWindow("Current_product")  # тест
     ui.show()
     sys.exit(app.exec_())

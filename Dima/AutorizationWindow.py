@@ -13,6 +13,7 @@ class Ui_AuthorizationWindow(object):
 
     # Конструктор класса
     def __init__(self, authorization_dialog):
+
         # Создание окна приложения
         self.authorization_dialog = authorization_dialog
         self.authorization_dialog.setObjectName("AuthorizationWindow")
@@ -22,6 +23,7 @@ class Ui_AuthorizationWindow(object):
         self.verticalLayoutWidget = QtWidgets.QWidget(self.authorization_dialog)
         self.verticalLayoutWidget.setGeometry(QtCore.QRect(620, 255, 400, 400))
         self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
+
         self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
@@ -99,6 +101,7 @@ class Ui_AuthorizationWindow(object):
         self.LogUp.clicked.connect(self.register)
         self.horizontalLayout.addWidget(self.LogUp)
         self.verticalLayout.addLayout(self.horizontalLayout)
+
         self.retranslateUi(self.authorization_dialog)
         QtCore.QMetaObject.connectSlotsByName(self.authorization_dialog)
 
@@ -135,9 +138,13 @@ class Ui_AuthorizationWindow(object):
         conn.close()
 
         if result:
-            main_window = UiMainWindow()  # Создаем экземпляр UiMainWindow
-            main_window.show()  # Показываем основное окно
-            # self.authorization_dialog.accept()  # Закрываем окно авторизации
+            # Создаем экземпляр QMainWindow
+            main_window = UiMainWindow()
+            # Показываем основное окно
+            main_window.show()
+            UiMainWindow.ui_table_instance = main_window # почему без этого не работает
+            # Закрываем окно авторизации
+            # self.authorization_dialog.accept()
         else:
             show_notification("Неверное имя пользователя или пароль")
 

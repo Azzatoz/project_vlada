@@ -1,14 +1,13 @@
+import sqlite3
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 class Ui_OperationWindow(object):
 
-    def __init__(self):
-        self.operationWindow = QtWidgets.QMainWindow()
+    def __init__(self, table_name):
+        self.operationWindow = QtWidgets.QDialog()
         self.operationWindow.setObjectName("OperationWindow")
         self.operationWindow.resize(1620, 960)
-        self.centralwidget = QtWidgets.QWidget(self.operationWindow)
-        self.centralwidget.setObjectName("centralwidget")
         self.verticalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
         self.verticalLayoutWidget.setGeometry(QtCore.QRect(100, 60, 1400, 860))
         self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
@@ -54,6 +53,11 @@ class Ui_OperationWindow(object):
 
         self.retranslateUi(self.operationWindow)
         QtCore.QMetaObject.connectSlotsByName(self.operationWindow)
+        self.table_name = table_name
+
+        # Подключение к базе данных
+        self.conn = sqlite3.connect('warehouse.db')
+        self.c = self.conn.cursor()
 
     def retranslateUi(self, OperationWindow):
         _translate = QtCore.QCoreApplication.translate
@@ -68,11 +72,21 @@ class Ui_OperationWindow(object):
     def show(self):
         self.operationWindow.show()
 
+    def set_button_text(self, operation_type):
+        if operation_type == "списать":
+            self.choose_button.setText("Списать")
+        elif operation_type == "продать":
+            self.choose_button.setText("продать...")
+            # выбор клиента, если клиента нет - добавить
+        elif operation_type == "переместить":
+            # выбор склада куда переместить товар
+            self.choose_button.setText("Выбрать товар для перемещения")
+
 
 if __name__ == "__main__":
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
-    ui = Ui_OperationWindow()
+    ui = Ui_OperationWindow("Current_product")
     ui.show()
     sys.exit(app.exec_())

@@ -57,7 +57,7 @@ def create_database():
                     address VARCHAR(50) NOT NULL,
                     coordinates INT NOT NULL,
                     geolocation VARCHAR(50) NOT NULL,
-                    json_note VARCHAR(255)
+                    json_product VARCHAR(255)
                 );
             """)
 
@@ -109,25 +109,82 @@ def generate_data():
     conn = sl.connect('warehouse.db')
     c = conn.cursor()
 
-    c.execute("SELECT COUNT(*) FROM Position")
-    position_count = c.fetchone()[0]
+    tables = ['Position', 'Warehouse', 'Client', 'Worker', 'Operation', 'Current_product', 'Product_property',
+              'Operation_product']
 
-    if position_count == 0:
-        positions = [('Директор', 50000, 5), ('Менеджер', 50000, 4), ('Кладовщик', 50000, 3),
-                     ('Кассир', 50000, 2), ('Новый пользователь', 0, 1)]
+    for table in tables:
+        c.execute(f"SELECT COUNT(*) FROM {table}")
+        count = c.fetchone()[0]
 
-        for position, salary, access_level in positions:
-            c.execute("INSERT INTO Position (name_position, salary, access_level) VALUES (?, ?, ?)",
-                      (position, salary, access_level))
+        if count == 0:
+            if table == 'Position':
+                positions = [('Директор', 50000, 5), ('Менеджер', 50000, 4), ('Кладовщик', 50000, 3),
+                             ('Кассир', 50000, 2), ('Новый пользователь', 0, 1)]
+                c.executemany("INSERT INTO Position (name_position, salary, access_level) "
+                              "VALUES (?, ?, ?)", positions)
 
-        names = [('Иван', 'Иванов')]
-        for name, surname in names:
-            username = "admin"
-            password = "admin"
-            c.execute("INSERT INTO Worker (name, phone_number, birthday, username, password, position_id) "
-                      "VALUES (?, ?, ?, ?, ?, ?)",
-                      (f"{name} {surname}", '1234567890', '2000-01-01', username, password, 1))  # Директор с id = 1
+            elif table == 'Warehouse':
+                warehouses = [('Склад 1', 'г.Минск, ул.Богдановича, дом 71', 37.7749, '37.7749', 'Товар 1, товар 2'),
+                              ('Склад 2', 'г.Минск, ул.Богдановича, дом 72', 37.7749, '37.7749', 'Товар 3, товар 4'),
+                              ('Склад 3', 'г.Минск, ул.Богдановича, дом 73', 37.7749, '37.7749', 'Товар 5, товар 6')]
+                c.executemany("INSERT INTO Warehouse (name, address, coordinates, geolocation, json_product) "
+                              "VALUES (?, ?, ?, ?, ?)", warehouses)
 
-        conn.commit()
+            elif table == 'Client':
+                clients = [('Клиент 1', 1234567890, 'Любит гулять'),
+                           ('Клиент 2', 1256787890, 'Любит играть'),
+                           ('Клиент 3', 4567567890, 'Не любит играть'),
+                           ('Клиент 4', 9876543210, 'Не любит гулять')]
+                c.executemany("INSERT INTO Client (name, phone_number, json_note) VALUES (?, ?, ?)", clients)
 
+            elif table == 'Worker':
+                workers = [('Иван Иванов', '2000-01-01', 1233467890, 1, 'admin', 'admin'),
+                           ('Коля Черничка', '2000-05-02', 1234457890, 2, 'admin', 'admin'),
+                           ('Вася Васильков', '2005-04-01', 1223467890, 3, 'admin', 'admin'),
+                           ('Илья Котиков', '2003-02-01', 1298567890, 4, 'admin', 'admin')]
+                c.executemany(
+                    "INSERT INTO Worker (name, birthday, phone_number, position_id, username, password)"
+                    " VALUES (?, ?, ?, ?, ?, ?)", workers)
+
+            elif table == 'Operation':
+                operations = [('Перемещение товара на другой склад', 1, 1, '2024-03-17', 'Доп характеристики'),
+                              ('Продажа товара', 2, 1, '2024-03-18', None),
+                              ('Принятие товара', 2, 2, '2024-03-19', 'Доп характеристики'),
+                              ('Списание товара', 3, 3, '2024-03-20', None)]
+                c.executemany(
+                    "INSERT INTO Operation (type, client_id, worker_id, time, additional_characteristics) "
+                    "VALUES (?, ?, ?, ?, ?)", operations)
+
+            elif table == 'Current_product':
+                current_products = [(10, 1, 1, '2024-03-17', '2024-03-17'),
+                                    (15, 1, 2, '2024-03-18', '2024-03-17'),
+                                    (20, 2, 1, '2024-03-19', '2024-03-17'),
+                                    (25, 3, 3, '2024-03-20', '2024-03-17'),
+                                    (30, 4, 2, '2024-03-21', '2024-03-17')]
+                c.executemany(
+                    "INSERT INTO Current_product (quantity, operation_id, warehouse_id, delivery_date, "
+                    "expiration_date_operation) VALUES (?, ?, ?, ?, ?)", current_products)
+
+            elif table == 'Product_property':
+                product_properties = [(1, 'Товар 1', 'Категория 1', 'Характеристики', '2024-03-17', 100, 12340, None),
+                                      (1, 'Товар 1', 'Категория 1', 'Характеристики', '2024-03-17', 100, 12340, None),
+                                      (2, 'Товар 2', 'Категория 2', 'Характеристики', '2024-03-17', 200, 12341, None),
+                                      (3, 'Товар 3', 'Категория 3', 'Характеристики', '2024-03-17', 100, 12342, None),
+                                      (4, 'Товар 4', 'Категория 4', 'Характеристики', '2024-03-17', 170, 12343, None)]
+                c.executemany(
+                    "INSERT INTO Product_property (current_product_id, current_product_name, category, "
+                    "characteristics, expiration_date, price, article_number, photo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    product_properties)
+
+            elif table == 'Operation_product':
+                operation_products = [(1, 1, None, 10, 'Доставлен'),
+                                      (2, 2, 1, 11, 'На складе'),
+                                      (2, 3, None, 12, 'На складе'),
+                                      (3, 3, 1, 13, 'На складе'),
+                                      (4, 1, None, 14, 'Доставлен')]
+                c.executemany(
+                    "INSERT INTO Operation_product (operation_id, product_id, warehouse_id, quantity, condition) "
+                    "VALUES (?, ?, ?, ?, ?)", operation_products)
+
+    conn.commit()
     conn.close()

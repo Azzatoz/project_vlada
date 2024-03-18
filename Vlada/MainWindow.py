@@ -4,7 +4,7 @@ from support_file import SupportClass
 from PyQt5 import QtCore, QtWidgets
 import sqlite3
 
-path = 'warehouse.db'
+path = '../warehouse.db'
 
 
 class UiMainWindow(QtWidgets.QMainWindow):
@@ -34,6 +34,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.search_edit = QtWidgets.QLineEdit(self.central_widget)
         self.search_edit.setGeometry(QtCore.QRect(110, 111, 391, 31))
         self.search_edit.setObjectName("search_edit")
+        self.search_edit.setPlaceholderText("Искать:")
         self.open_client_btn = QtWidgets.QPushButton(self.central_widget)
         self.open_client_btn.setGeometry(QtCore.QRect(650, 100, 111, 41))
         self.open_client_btn.setObjectName("open_client_btn")
@@ -74,6 +75,9 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
         support_instance = SupportClass(self.table_name, self.connection, self.table_widget)
         support_instance.display_table_data()
+        self.search_edit.textChanged.connect(lambda text: support_instance.search_table(text))
+        self.table_widget.horizontalHeader().sectionClicked.connect(
+            lambda clicked_column: support_instance.sort_data_by_column(clicked_column))
 
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)

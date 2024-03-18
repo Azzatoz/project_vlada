@@ -15,6 +15,7 @@ class SupportClass:
         self.connection = connection
         self.table_widget = table_widget
         self.original_data = {}
+        self.table_widget.sort_order = None
 
     def display_table_data(self):
         if self.connection and self.table_name:
@@ -36,54 +37,47 @@ class SupportClass:
                     if col_index == 0:
                         item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
 
-    def sort_table_by_column(self, logical_index):
+    def get_visible_data(self):
         """
-        Сортирует данные по нажатию на заголовок столбца
+        Извлекает данные из видимых строк таблицы
+        :return:
         """
-        column_type = self.get_column_type(logical_index)
-
-        # данные из столбца
-        column_data = []
+        visible_data = []
         for row in range(self.table_widget.rowCount()):
-            item = self.table_widget.item(row, logical_index)
-            if item:
-                column_data.append(item.text())
-            else:
-                column_data.append('')
+            if not self.table_widget.isRowHidden(row):
+                visible_row_data = []
+                for column in range(self.table_widget.columnCount()):
+                    item = self.table_widget.item(row, column)
+                    if item is not None:
+                        visible_row_data.append(item.text())
+                    else:
+                        visible_row_data.append('')
+                visible_data.append(visible_row_data)
+        return visible_data
 
-        # Сортирует данные в зависимости от типа столбца
-        if column_type == int:
-            column_data = [int(item) for item in column_data]
-        elif column_type == float:
-            column_data = [float(item) for item in column_data]
-
-        # Определяет порядок сортировки
-        sort_order = QtCore.Qt.AscendingOrder if (self.table_widget.horizontalHeader().sortIndicatorOrder() ==
-                                                  QtCore.Qt.AscendingOrder) else QtCore.Qt.DescendingOrder
-
-        # Применяет сортировку к таблице
-        sorted_data = sorted(enumerate(column_data), key=lambda x: x[1],
-                             reverse=(sort_order == QtCore.Qt.DescendingOrder))
-        for new_row, (old_row, _) in enumerate(sorted_data):
-            self.table_widget.setRowHidden(new_row, False)
-            for col in range(self.table_widget.columnCount()):
-                item = self.table_widget.item(old_row, col)
-                if item:
-                    new_item = item.clone()
-                    self.table_widget.setItem(new_row, col, new_item)
-
-    def get_column_type(self, logical_index):
+    def sort_data_by_column(self, column_index):
         """
-        Определяем тип данных в столбце
+        Сортирует данные
+        :param column_index:
+        :return:
         """
-        column_type = str(self.connection.execute(f"PRAGMA table_info({self.table_name})").fetchall()[logical_index][2])
-
-        if 'INT' in column_type:
-            return int
-        elif 'REAL' in column_type:
-            return float
+        current_order = self.table_widget.sort_order
+        if current_order is None:
+            current_order = True
         else:
-            return str
+            current_order = not current_order
+
+        visible_data = self.get_visible_data()
+        sorted_data = sorted(visible_data, key=lambda x: x[column_index], reverse=current_order)
+
+        row_index = 0
+        for row_data in sorted_data:
+            for column_index, cell_data in enumerate(row_data):
+                item = QtWidgets.QTableWidgetItem(str(cell_data))
+                self.table_widget.setItem(row_index, column_index, item)
+            row_index += 1
+
+        self.table_widget.sort_order = current_order
 
     def cell_changed(self, item):
         """

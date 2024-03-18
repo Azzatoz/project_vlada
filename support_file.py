@@ -6,67 +6,67 @@ class Ui_DialogTable(object):
     connection = None
     changes_made = False
 
-    def setupUi(self, Dialog):
-        self.original_data = {}
-        Dialog.setObjectName("Dialog")
-        Dialog.resize(774, 559)
-        self.tableWidget = QtWidgets.QTableWidget(Dialog)
-        self.tableWidget.setGeometry(QtCore.QRect(30, 70, 711, 361))
-        self.tableWidget.setObjectName("tableWidget")
-        self.tableWidget.setSortingEnabled(True)
-        self.tableWidget.itemChanged.connect(self.cell_changed)
-
-        self.btnAdd = QtWidgets.QPushButton(Dialog)
-        self.btnAdd.setGeometry(QtCore.QRect(602, 20, 131, 28))
-        self.btnAdd.setObjectName("btnAdd")
-
-        self.btnDelete = QtWidgets.QPushButton(Dialog)
-        self.btnDelete.setGeometry(QtCore.QRect(450, 20, 131, 28))
-        self.btnDelete.setObjectName("btnDelete")
-
-        self.btnSave = QtWidgets.QPushButton(Dialog)
-        self.btnSave.setEnabled(False)
-        self.btnSave.setGeometry(QtCore.QRect(600, 470, 131, 28))
-        self.btnSave.setObjectName("btnSave")
-
-        self.btnCancel = QtWidgets.QPushButton(Dialog)
-        self.btnCancel.setEnabled(False)
-        self.btnCancel.setGeometry(QtCore.QRect(450, 470, 131, 28))
-        self.btnCancel.setObjectName("btnCancel")
-
-        self.notification = QtWidgets.QTextEdit(Dialog)
-        self.notification.setGeometry(QtCore.QRect(30, 440, 401, 81))
-        self.notification.setObjectName("textEdit")
-
-        self.lineEdit = QtWidgets.QLineEdit(Dialog)
-        self.lineEdit.setGeometry(QtCore.QRect(30, 40, 350, 22))
-        self.lineEdit.setObjectName("lineEdit")
-        self.lineEdit.textChanged.connect(self.search_table)
-
-        self.btnAdd.clicked.connect(self.add)
-        self.btnDelete.clicked.connect(self.delete)
-        self.btnSave.clicked.connect(self.save)
-        self.btnCancel.clicked.connect(self.cancel)
-
-        self.retranslateUi(Dialog)
-        QtCore.QMetaObject.connectSlotsByName(Dialog)
-
-        self.display_table_data()
-        self.btnSave.setEnabled(False)
-        self.btnCancel.setEnabled(False)
-        for col in range(self.tableWidget.columnCount()):
-            self.tableWidget.horizontalHeaderItem(col).setTextAlignment(QtCore.Qt.AlignCenter)
-            self.tableWidget.horizontalHeaderItem(col).setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
-            self.tableWidget.horizontalHeader().setSectionsClickable(True)
-            self.tableWidget.horizontalHeader().sectionClicked.connect(self.sort_table_by_column)
-
-    def retranslateUi(self, Dialog):
-        _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
-        self.btnAdd.setText(_translate("Dialog", "Добавить"))
-        self.btnDelete.setText(_translate("Dialog", "Удалить"))
-        self.btnSave.setText(_translate("Dialog", "Сохранить"))
-        self.btnCancel.setText(_translate("Dialog", "Отменить"))
+    # def setupUi(self, Dialog):
+    #     self.original_data = {}
+    #     Dialog.setObjectName("Dialog")
+    #     Dialog.resize(774, 559)
+    #     self.tableWidget = QtWidgets.QTableWidget(Dialog)
+    #     self.tableWidget.setGeometry(QtCore.QRect(30, 70, 711, 361))
+    #     self.tableWidget.setObjectName("tableWidget")
+    #     self.tableWidget.setSortingEnabled(True)
+    #     self.tableWidget.itemChanged.connect(self.cell_changed)
+    #
+    #     self.btnAdd = QtWidgets.QPushButton(Dialog)
+    #     self.btnAdd.setGeometry(QtCore.QRect(602, 20, 131, 28))
+    #     self.btnAdd.setObjectName("btnAdd")
+    #
+    #     self.btnDelete = QtWidgets.QPushButton(Dialog)
+    #     self.btnDelete.setGeometry(QtCore.QRect(450, 20, 131, 28))
+    #     self.btnDelete.setObjectName("btnDelete")
+    #
+    #     self.btnSave = QtWidgets.QPushButton(Dialog)
+    #     self.btnSave.setEnabled(False)
+    #     self.btnSave.setGeometry(QtCore.QRect(600, 470, 131, 28))
+    #     self.btnSave.setObjectName("btnSave")
+    #
+    #     self.btnCancel = QtWidgets.QPushButton(Dialog)
+    #     self.btnCancel.setEnabled(False)
+    #     self.btnCancel.setGeometry(QtCore.QRect(450, 470, 131, 28))
+    #     self.btnCancel.setObjectName("btnCancel")
+    #
+    #     self.notification = QtWidgets.QTextEdit(Dialog)
+    #     self.notification.setGeometry(QtCore.QRect(30, 440, 401, 81))
+    #     self.notification.setObjectName("textEdit")
+    #
+    #     self.lineEdit = QtWidgets.QLineEdit(Dialog)
+    #     self.lineEdit.setGeometry(QtCore.QRect(30, 40, 350, 22))
+    #     self.lineEdit.setObjectName("lineEdit")
+    #     self.lineEdit.textChanged.connect(self.search_table)
+    #
+    #     self.btnAdd.clicked.connect(self.add)
+    #     self.btnDelete.clicked.connect(self.delete)
+    #     self.btnSave.clicked.connect(self.save)
+    #     self.btnCancel.clicked.connect(self.cancel)
+    #
+    #     self.retranslateUi(Dialog)
+    #     QtCore.QMetaObject.connectSlotsByName(Dialog)
+    #
+    #     self.display_table_data()
+    #     self.btnSave.setEnabled(False)
+    #     self.btnCancel.setEnabled(False)
+    #     for col in range(self.tableWidget.columnCount()):
+    #         self.tableWidget.horizontalHeaderItem(col).setTextAlignment(QtCore.Qt.AlignCenter)
+    #         self.tableWidget.horizontalHeaderItem(col).setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+    #         self.tableWidget.horizontalHeader().setSectionsClickable(True)
+    #         self.tableWidget.horizontalHeader().sectionClicked.connect(self.sort_table_by_column)
+    #
+    # def retranslateUi(self, Dialog):
+    #     _translate = QtCore.QCoreApplication.translate
+    #     Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
+    #     self.btnAdd.setText(_translate("Dialog", "Добавить"))
+    #     self.btnDelete.setText(_translate("Dialog", "Удалить"))
+    #     self.btnSave.setText(_translate("Dialog", "Сохранить"))
+    #     self.btnCancel.setText(_translate("Dialog", "Отменить"))
 
     def display_table_data(self):
         if self.connection and self.table_name:
@@ -280,7 +280,7 @@ class Ui_DialogTable(object):
             # Фиксируем изменения в базе данных
             self.connection.commit()
 
-            # Оповещаем пользователя о успешном сохранении
+            # Оповещаем пользователя об успешном сохранении
             QtWidgets.QMessageBox.information(None, "Успешное сохранение", "Изменения успешно сохранены в базе данных.")
 
             # Сбрасываем флаг изменений и блокируем кнопки
@@ -309,13 +309,49 @@ class Ui_DialogTable(object):
         with self.connection:
             self.connection.execute(update_query, (*new_data[1:], old_data[0]))
 
+    def set_info(self, table_name, operation_type):
+        if operation_type == "списать":
+            self.choose_button.setText("Списать")
+        elif operation_type == "продать":
+            self.choose_button.setText("продать...")
+            # выбор клиента, если клиента нет - добавить
+        elif operation_type == "переместить":
+            # выбор склада куда переместить товар
+            self.choose_button.setText("Выбрать товар для перемещения")
 
-if __name__ == "__main__":
-    import sys
+    def write_off(self):
+        selected_row = self.tableWidget.currentRow()
+        if selected_row >= 0:
+            item_id = self.tableWidget.item(selected_row, 0).text()  # Получаем id товара из выбранной строки
+            # Здесь можно написать код для списания товара по его id
+            show_notification(f"Товар с id {item_id} успешно списан.")
+        else:
+            show_notification("Выберите товар для списания.")
 
-    app = QtWidgets.QApplication(sys.argv)
-    Dialog = QtWidgets.QDialog()
-    ui = Ui_DialogTable()
-    ui.setupUi(Dialog)
-    Dialog.show()
-    sys.exit(app.exec_())
+    def sell(self):
+        selected_row = self.tableWidget.currentRow()
+        if selected_row >= 0:
+            item_id = self.tableWidget.item(selected_row, 0).text()  # Получаем id товара из выбранной строки
+            # Здесь можно написать код для продажи товара по его id
+            show_notification(f"Товар с id {item_id} успешно продан.")
+        else:
+            show_notification("Выберите товар для продажи.")
+
+    def move(self):
+        selected_row = self.tableWidget.currentRow()
+        if selected_row >= 0:
+            item_id = self.tableWidget.item(selected_row, 0).text()  # Получаем id товара из выбранной строки
+            # Здесь можно написать код для перемещения товара по его id
+            show_notification(f"Товар с id {item_id} успешно перемещен.")
+        else:
+            show_notification("Выберите товар для перемещения.")
+
+# if __name__ == "__main__":
+#     import sys
+#
+#     app = QtWidgets.QApplication(sys.argv)
+#     Dialog = QtWidgets.QDialog()
+#     ui = Ui_DialogTable()
+#     ui.setupUi(Dialog)
+#     Dialog.show()
+#     sys.exit(app.exec_())

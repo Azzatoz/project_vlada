@@ -7,8 +7,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(UiMainWindow, self).__init__()
 
-        self.table_name = "Current_product"
-
         self.setObjectName("MainWindow")
         self.resize(1200, 800)
         self.central_widget = QtWidgets.QWidget(self)
@@ -85,14 +83,14 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.open_warehouse_btn.setText(_translate("MainWindow", "Склады"))
         self.cancel_btn.setText(_translate("MainWindow", "Отмена"))
 
-        self.write_off_product_btn.clicked.connect(partial(self.operation_window, self.table_name))
-        self.move_product_btn.clicked.connect(partial(self.operation_window, self.table_name))
-        self.sell_product_btn.clicked.connect(partial(self.operation_window, self.table_name))
-        self.accept_product_btn.clicked.connect(partial(self.operation_window, self.table_name))
+        self.write_off_product_btn.clicked.connect(partial(self.operation_window, 'Списать'))
+        self.move_product_btn.clicked.connect(partial(self.operation_window, 'Переместить'))
+        self.sell_product_btn.clicked.connect(partial(self.operation_window, 'Продать'))
+        self.accept_product_btn.clicked.connect(partial(self.operation_window, 'Принять'))
 
     @staticmethod
-    def operation_window(table_name):
-        ui_table = Ui_OperationWindow(table_name)
+    def operation_window(operation):
+        ui_table = Ui_OperationWindow(operation)
         ui_table.show()
         UiMainWindow.ui_table_instance = ui_table
 

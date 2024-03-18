@@ -93,7 +93,8 @@ class UiMainWindow(QtWidgets.QMainWindow):
     @staticmethod
     def operation_window(table_name):
         ui_table = Ui_OperationWindow(table_name)
-        ui_table.exec_()
+        ui_table.show()
+        UiMainWindow.ui_table_instance = ui_table
 
 
 if __name__ == "__main__":

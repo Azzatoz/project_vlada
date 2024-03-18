@@ -58,9 +58,9 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.open_warehouse_btn = QtWidgets.QPushButton(self.central_widget)
         self.open_warehouse_btn.setGeometry(QtCore.QRect(520, 100, 111, 41))
         self.open_warehouse_btn.setObjectName("open_warehouse_btn")
-        self.cancel_btn = QtWidgets.QPushButton(self.central_widget)
-        self.cancel_btn.setGeometry(QtCore.QRect(1010, 100, 93, 41))
-        self.cancel_btn.setObjectName("cancel_btn")
+        self.cancel_button = QtWidgets.QPushButton(self.central_widget)
+        self.cancel_button.setGeometry(QtCore.QRect(1010, 100, 93, 41))
+        self.cancel_button.setObjectName("cancel_button")
         self.setCentralWidget(self.central_widget)
 
         self.re_translate_ui()
@@ -81,7 +81,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.filter_btn.setText(_translate("MainWindow", "Фильтр по операциям"))
         self.open_statistic_btn.setText(_translate("MainWindow", "Статистика"))
         self.open_warehouse_btn.setText(_translate("MainWindow", "Склады"))
-        self.cancel_btn.setText(_translate("MainWindow", "Отмена"))
+        self.cancel_button.setText(_translate("MainWindow", "Отмена"))
 
         self.write_off_product_btn.clicked.connect(partial(self.operation_window, 'Списать'))
         self.move_product_btn.clicked.connect(partial(self.operation_window, 'Переместить'))

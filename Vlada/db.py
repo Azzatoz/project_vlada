@@ -138,10 +138,10 @@ def generate_data():
                 c.executemany("INSERT INTO Client (name, phone_number, json_note) VALUES (?, ?, ?)", clients)
 
             elif table == 'Worker':
-                workers = [('Иван Иванов', '2000-01-01', 1233467890, 1, 'admin', 'admin'),
-                           ('Коля Черничка', '2000-05-02', 1234457890, 2, 'admin', 'admin'),
-                           ('Вася Васильков', '2005-04-01', 1223467890, 3, 'admin', 'admin'),
-                           ('Илья Котиков', '2003-02-01', 1298567890, 4, 'admin', 'admin')]
+                workers = [('Иван Иванов', '2000-01-01', 1233467890, 1, 'admin1', 'admin'),
+                           ('Коля Черничка', '2000-05-02', 1234457890, 2, 'admin2', 'admin'),
+                           ('Вася Васильков', '2005-04-01', 1223467890, 3, 'admin3', 'admin'),
+                           ('Илья Котиков', '2003-02-01', 1298567890, 4, 'admin4', 'admin')]
                 c.executemany(
                     "INSERT INTO Worker (name, birthday, phone_number, position_id, username, password)"
                     " VALUES (?, ?, ?, ?, ?, ?)", workers)

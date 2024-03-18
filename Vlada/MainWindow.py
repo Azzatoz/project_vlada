@@ -1,5 +1,6 @@
 from functools import partial
 from Dima.OperationWindow import Ui_OperationWindow
+from OperationTableWindow import UiOperationTableWindow
 from support_file import SupportClass
 from PyQt5 import QtCore, QtWidgets
 import sqlite3
@@ -34,6 +35,8 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.table_widget.setObjectName("table_widget")
         self.table_widget.setColumnCount(0)
         self.table_widget.setRowCount(0)
+        self.table_widget.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.table_widget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.search_edit = QtWidgets.QLineEdit(self.central_widget)
         self.search_edit.setGeometry(QtCore.QRect(110, 111, 391, 31))
         self.search_edit.setObjectName("search_edit")
@@ -91,6 +94,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.log_out_btn.clicked.connect(self.log_out)
         self.cancel_button.clicked.connect(self.cancel_deletion_row)
         self.delete_row_btn.clicked.connect(self.delete_and_enable_cancel_button)
+        self.table_widget.itemDoubleClicked.connect(self.open_operation_table_window)
 
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)
@@ -111,15 +115,20 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.open_warehouse_btn.setText(_translate("MainWindow", "Склады"))
         self.cancel_button.setText(_translate("MainWindow", "Отмена"))
 
-        self.write_off_product_btn.clicked.connect(partial(self.operation_window, 'Списать'))
-        self.move_product_btn.clicked.connect(partial(self.operation_window, 'Переместить'))
-        self.sell_product_btn.clicked.connect(partial(self.operation_window, 'Продать'))
-        self.accept_product_btn.clicked.connect(partial(self.operation_window, 'Принять'))
+        self.write_off_product_btn.clicked.connect(partial(self.open_operation_window, 'Списать'))
+        self.move_product_btn.clicked.connect(partial(self.open_operation_window, 'Переместить'))
+        self.sell_product_btn.clicked.connect(partial(self.open_operation_window, 'Продать'))
+        self.accept_product_btn.clicked.connect(partial(self.open_operation_window, 'Принять'))
 
-    def operation_window(self, operation):
+    def open_operation_window(self, operation):
         operation_window = Ui_OperationWindow(operation, self.cursor, self.name_user)
         operation_window.show()
         UiMainWindow.operation_window_instance = operation_window
+
+    def open_operation_table_window(self):
+        operation_table_window = UiOperationTableWindow(self.cursor)
+        operation_table_window.show()
+        UiMainWindow.operation_table_window_instance = operation_table_window
 
     def filter_row(self):
         selected_filter = self.filter_box.currentText()

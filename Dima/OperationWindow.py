@@ -6,6 +6,10 @@ from support_file import SupportClass
 class Ui_OperationWindow(object):
     def __init__(self, operation, cursor):
 
+        self.operation = operation
+        self.original_data = {}
+        self.table_name = "Current_product"
+
         self.operationWindow = QtWidgets.QDialog()
         self.operationWindow.setObjectName("OperationWindow")
         self.operationWindow.resize(1620, 960)
@@ -49,11 +53,9 @@ class Ui_OperationWindow(object):
         self.retranslateUi(self.operationWindow)
         QtCore.QMetaObject.connectSlotsByName(self.operationWindow)
 
-        # Подключение к базе данных
         self.cursor = cursor
-        self.operation = operation
-        self.original_data = {}
-        self.support = SupportClass(table_name, cursor, table_widget)
+        self.support = SupportClass(self.table_name, cursor, self.tableWidget)
+
         # Подключаем событие выбора ячейки к функции cell_selected
         self.tableWidget.itemSelectionChanged.connect(self.cell_selected)
 
@@ -83,10 +85,12 @@ class Ui_OperationWindow(object):
             self.support.move()
             self.choose_button.setText("Выбрать товар для перемещения")
 
-# if __name__ == "__main__":
-#     import sys
-#
-#     app = QtWidgets.QApplication(sys.argv)
-#     ui = Ui_OperationWindow("Продать")  # тест
-#     ui.show()
-#     sys.exit(app.exec_())
+if __name__ == "__main__":
+    import sys
+
+    conn = sqlite3.connect('warehouse.db')
+    c = conn.cursor()
+    app = QtWidgets.QApplication(sys.argv)
+    ui = Ui_OperationWindow("Продать", c)  # тест
+    ui.show()
+    sys.exit(app.exec_())

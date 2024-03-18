@@ -21,6 +21,7 @@ class SupportClass:
         if self.connection and self.table_name:
             query_data = f"SELECT * FROM {self.table_name}"
             result_data = self.connection.execute(query_data).fetchall()
+            initial_result_data = result_data[:]
             query_headers = f"PRAGMA table_info({self.table_name})"
             result_headers = self.connection.execute(query_headers).fetchall()
             headers = [column[1] for column in result_headers]
@@ -29,6 +30,18 @@ class SupportClass:
             self.table_widget.setRowCount(len(result_data))
             self.table_widget.setColumnCount(count_columns)
             self.table_widget.setHorizontalHeaderLabels(headers)
+
+            if self.table_name == 'Operation':
+                query_data = f"SELECT name FROM Client UNION ALL SELECT name FROM Worker"
+                names = [name[0] for name in self.connection.execute(query_data).fetchall()]
+                client_names = names[:len(result_data)]
+                worker_names = names[len(result_data):]
+
+                for row_index, row_data in enumerate(result_data):
+                    client_name = client_names[row_index] if row_index < len(client_names) else ""
+                    worker_name = worker_names[row_index] if row_index < len(worker_names) else ""
+                    new_row_data = row_data[:2] + (client_name, worker_name) + row_data[4:]
+                    result_data[row_index] = new_row_data
 
             for row_index, row_data in enumerate(result_data):
                 for col_index, col_data in enumerate(row_data):
@@ -39,7 +52,7 @@ class SupportClass:
                     self.original_data[row_index, col_index] = str(col_data)
                     if col_index == 0:
                         item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
-            return result_data, count_columns
+            return initial_result_data, count_columns
 
     def get_visible_data(self):
         """
@@ -220,9 +233,11 @@ class SupportClass:
                 else:
                     old_data = result_data[row]
 
-                    if new_data != old_data:
-                        # Обновляем существующую запись в базе данных
-                        self.update_record(new_data, old_data)
+                    if self.table_name != 'Operation':
+
+                        if new_data != old_data:
+                            # Обновляем существующую запись в базе данных
+                            self.update_record(new_data, old_data)
 
             # Фиксируем изменения в базе данных
             self.connection.commit()

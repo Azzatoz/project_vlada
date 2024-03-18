@@ -86,7 +86,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.cancel_button.setEnabled(False)
         self.setCentralWidget(self.central_widget)
 
-        self.support_instance = SupportClass(self.table_name, self.cursor, self.table_widget)
+        self.support_instance = SupportClass(self.table_name, self.connection, self.table_widget)
         self.db_data, self.count_columns = self.support_instance.display_table_data()
         self.search_edit.textChanged.connect(lambda text: self.support_instance.search_table(text))
         self.table_widget.horizontalHeader().sectionClicked.connect(
@@ -122,7 +122,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.accept_product_btn.clicked.connect(partial(self.open_operation_window, 'Принять'))
 
     def open_operation_window(self, operation):
-        operation_window = Ui_OperationWindow(operation, self.cursor, self.name_user)
+        operation_window = Ui_OperationWindow(operation, self.connection, self.name_user)
         operation_window.show()
         UiMainWindow.operation_window_instance = operation_window
 
@@ -132,7 +132,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         item_id = item.text()
         for self.row_data in self.db_data:
             if self.row_data[0] == int(item_id):
-                operation_table_window = UiOperationTableWindow(self.cursor, self.row_data)
+                operation_table_window = UiOperationTableWindow(self.connection, self.row_data)
                 operation_table_window.show()
                 UiMainWindow.operation_table_window_instance = operation_table_window
 
@@ -188,6 +188,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
     def delete_and_enable_cancel_button(self):
         try:
+            self.support_instance.delete()
             self.support_instance.save()
             self.cancel_button.setEnabled(True)
             self.output_edit.setText(f"Запись(и) успешно удалены из базы данных.")

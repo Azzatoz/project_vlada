@@ -1,5 +1,10 @@
 from PyQt5 import QtCore, QtWidgets
-from Dima.AutorizationWindow import show_notification
+
+
+def show_notification(message):
+    msg_box = QtWidgets.QMessageBox()
+    msg_box.setText(message)
+    msg_box.exec_()
 
 
 class SupportClass:

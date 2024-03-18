@@ -1,11 +1,20 @@
 from functools import partial
 from Dima.OperationWindow import Ui_OperationWindow
+from support_file import SupportClass
 from PyQt5 import QtCore, QtWidgets
+import sqlite3
+
+path = 'warehouse.db'
 
 
 class UiMainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(UiMainWindow, self).__init__()
+
+        self.table_name = 'Operation'
+
+        self.connection = sqlite3.connect(path)
+        self.cursor = self.connection.cursor()
 
         self.setObjectName("MainWindow")
         self.resize(1200, 800)
@@ -63,6 +72,9 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.cancel_button.setObjectName("cancel_button")
         self.setCentralWidget(self.central_widget)
 
+        support_instance = SupportClass(self.table_name, self.connection, self.table_widget)
+        support_instance.display_table_data()
+
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)
 
@@ -88,9 +100,8 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.sell_product_btn.clicked.connect(partial(self.operation_window, 'Продать'))
         self.accept_product_btn.clicked.connect(partial(self.operation_window, 'Принять'))
 
-    @staticmethod
-    def operation_window(operation):
-        ui_table = Ui_OperationWindow(operation)
+    def operation_window(self, operation):
+        ui_table = Ui_OperationWindow(operation, self.cursor)
         ui_table.show()
         UiMainWindow.ui_table_instance = ui_table
 

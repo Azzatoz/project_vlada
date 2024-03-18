@@ -55,9 +55,8 @@ class Ui_OperationWindow(object):
 
         self.cursor = cursor
         self.support = SupportClass(self.table_name, cursor, self.tableWidget)
-
-        # Подключаем событие выбора ячейки к функции cell_selected
-        self.tableWidget.itemSelectionChanged.connect(self.cell_selected)
+        self.support.display_table_data()
+        self.tableWidget.itemSelectionChanged.connect(self.support.cell_selected)
 
     def retranslateUi(self, OperationWindow):
         _translate = QtCore.QCoreApplication.translate
@@ -84,6 +83,7 @@ class Ui_OperationWindow(object):
             # выбор склада куда переместить товар
             self.support.move()
             self.choose_button.setText("Выбрать товар для перемещения")
+
 
 if __name__ == "__main__":
     import sys

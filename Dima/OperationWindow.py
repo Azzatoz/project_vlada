@@ -1,16 +1,10 @@
 import sqlite3
 from PyQt5 import QtCore, QtGui, QtWidgets
+from support_file import SupportClass
 
 
 class Ui_OperationWindow(object):
-    def __init__(self, operation):
-
-        self.operation = operation
-        self.original_data = {}
-
-        # Подключение к базе данных
-        self.conn = sqlite3.connect('warehouse.db')
-        self.c = self.conn.cursor()
+    def __init__(self, operation, cursor):
 
         self.operationWindow = QtWidgets.QDialog()
         self.operationWindow.setObjectName("OperationWindow")
@@ -41,12 +35,12 @@ class Ui_OperationWindow(object):
         self.horizontalLayout.setObjectName("horizontalLayout")
         spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem1)
-        self.confirm_button = QtWidgets.QPushButton(self.verticalLayoutWidget)
-        self.confirm_button.setEnabled(True)
-        self.confirm_button.setMouseTracking(False)
-        self.confirm_button.setCheckable(False)
-        self.confirm_button.setObjectName("confirm_button")
-        self.horizontalLayout.addWidget(self.confirm_button)
+        self.save_button = QtWidgets.QPushButton(self.verticalLayoutWidget)
+        self.save_button.setEnabled(True)
+        self.save_button.setMouseTracking(False)
+        self.save_button.setCheckable(False)
+        self.save_button.setObjectName("save_button")
+        self.horizontalLayout.addWidget(self.save_button)
         self.cancel_button = QtWidgets.QPushButton(self.verticalLayoutWidget)
         self.cancel_button.setObjectName("cancel_button")
         self.horizontalLayout.addWidget(self.cancel_button)
@@ -55,34 +49,44 @@ class Ui_OperationWindow(object):
         self.retranslateUi(self.operationWindow)
         QtCore.QMetaObject.connectSlotsByName(self.operationWindow)
 
+        # Подключение к базе данных
+        self.cursor = cursor
+        self.operation = operation
+        self.original_data = {}
+        self.support = SupportClass(table_name, cursor, table_widget)
+        # Подключаем событие выбора ячейки к функции cell_selected
+        self.tableWidget.itemSelectionChanged.connect(self.cell_selected)
+
     def retranslateUi(self, OperationWindow):
         _translate = QtCore.QCoreApplication.translate
         OperationWindow.setWindowTitle(_translate("OperationWindow", "OperationWindow"))
-        self.choose_button.setText(_translate("OperationWindow", operation))
+        self.choose_button.setText(_translate("OperationWindow", self.operation))
         __sortingEnabled = self.tableWidget.isSortingEnabled()
         self.tableWidget.setSortingEnabled(True)
         self.tableWidget.setSortingEnabled(__sortingEnabled)
-        self.confirm_button.setText(_translate("OperationWindow", "Выполнить"))
+        self.save_button.setText(_translate("OperationWindow", "Выполнить"))
         self.cancel_button.setText(_translate("OperationWindow", "Отмена"))
 
     def show(self):
         self.operationWindow.show()
 
     def set_info(self, operation):
-        if operation == "списать":
+        if operation == "Списать":
             self.choose_button.setText("Списать")
-        elif operation == "продать":
+            self.support.write_off()
+        elif operation == "Продать":
             self.choose_button.setText("продать...")
+            self.support.sell()
             # выбор клиента, если клиента нет - добавить
-        elif operation == "переместить":
+        elif operation == "Переместить":
             # выбор склада куда переместить товар
+            self.support.move()
             self.choose_button.setText("Выбрать товар для перемещения")
 
-
-if __name__ == "__main__":
-    import sys
-
-    app = QtWidgets.QApplication(sys.argv)
-    ui = Ui_OperationWindow("Current_product")  # тест
-    ui.show()
-    sys.exit(app.exec_())
+# if __name__ == "__main__":
+#     import sys
+#
+#     app = QtWidgets.QApplication(sys.argv)
+#     ui = Ui_OperationWindow("Продать")  # тест
+#     ui.show()
+#     sys.exit(app.exec_())

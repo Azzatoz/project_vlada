@@ -5,7 +5,7 @@ from support_file import SupportClass
 from PyQt5 import QtCore, QtWidgets
 import sqlite3
 
-path = '../warehouse.db'
+path = 'warehouse.db'
 
 
 class UiMainWindow(QtWidgets.QMainWindow):

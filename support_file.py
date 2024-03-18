@@ -32,6 +32,8 @@ class SupportClass:
 
             for row_index, row_data in enumerate(result_data):
                 for col_index, col_data in enumerate(row_data):
+                    if col_data == 'None':
+                        col_data = ''
                     item = QtWidgets.QTableWidgetItem(str(col_data))
                     self.table_widget.setItem(row_index, col_index, item)
                     self.original_data[row_index, col_index] = str(col_data)

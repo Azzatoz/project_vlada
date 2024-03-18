@@ -46,6 +46,9 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.print_row_data()
         self.support_instance = SupportClass(self.table_name, self.cursor, self.table_widget)
         self.support_instance.display_table_data()
+        self.search_edit.textChanged.connect(lambda text: self.support_instance.search_table(text))
+        self.table_widget.horizontalHeader().sectionClicked.connect(
+            lambda clicked_column: self.support_instance.sort_data_by_column(clicked_column))
 
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)

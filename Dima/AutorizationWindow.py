@@ -2,13 +2,6 @@ import sqlite3
 from PyQt5 import QtCore, QtWidgets
 from Vlada.MainWindow import UiMainWindow
 
-
-def show_notification(message):
-    msg_box = QtWidgets.QMessageBox()
-    msg_box.setText(message)
-    msg_box.exec_()
-
-
 class Ui_AuthorizationWindow(object):
 
     # Конструктор класса
@@ -142,9 +135,9 @@ class Ui_AuthorizationWindow(object):
             main_window = UiMainWindow()
             # Показываем основное окно
             main_window.show()
-            UiMainWindow.ui_table_instance = main_window # почему без этого не работает
+            UiMainWindow.ui_table_instance = main_window
             # Закрываем окно авторизации
-            # self.authorization_dialog.accept()
+            self.authorization_dialog.accept()
         else:
             show_notification("Неверное имя пользователя или пароль")
 

@@ -84,6 +84,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.table_widget.horizontalHeader().sectionClicked.connect(
             lambda clicked_column: support_instance.sort_data_by_column(clicked_column))
         self.filter_box.currentIndexChanged.connect(self.filter_row)
+        self.log_out_btn.clicked.connect(self.log_out)
 
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)
@@ -110,9 +111,9 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.accept_product_btn.clicked.connect(partial(self.operation_window, 'Принять'))
 
     def operation_window(self, operation):
-        ui_table = Ui_OperationWindow(operation, self.cursor)
-        ui_table.show()
-        UiMainWindow.ui_table_instance = ui_table
+        operation_window = Ui_OperationWindow(operation, self.cursor)
+        operation_window.show()
+        UiMainWindow.operation_window_instance = operation_window
 
     def filter_row(self):
         selected_filter = self.filter_box.currentText()
@@ -132,6 +133,14 @@ class UiMainWindow(QtWidgets.QMainWindow):
                 self.table_widget.setRowHidden(row, False)
             else:
                 self.table_widget.setRowHidden(row, True)
+
+    def log_out(self):
+        from Dima.AutorizationWindow import Ui_AuthorizationWindow
+        self.close()
+        authorization_dialog = QtWidgets.QDialog()
+        auth_window = Ui_AuthorizationWindow(authorization_dialog)
+        auth_window.show()
+        UiMainWindow.auth_window_instance = auth_window
 
 
 if __name__ == "__main__":

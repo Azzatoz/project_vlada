@@ -2,6 +2,7 @@ import sqlite3
 from PyQt5 import QtCore, QtWidgets
 from Vlada.MainWindow import UiMainWindow
 
+
 class Ui_AuthorizationWindow(object):
 
     # Конструктор класса
@@ -132,7 +133,8 @@ class Ui_AuthorizationWindow(object):
 
         if result:
             # Создаем экземпляр QMainWindow
-            main_window = UiMainWindow()
+            # попросить принять имя пользователя
+            main_window = UiMainWindow(result[1])
             # Показываем основное окно
             main_window.show()
             UiMainWindow.ui_table_instance = main_window

@@ -3,7 +3,15 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 class Ui_OperationWindow(object):
-    def __init__(self, table_name):
+    def __init__(self, operation):
+
+        self.operation = operation
+        self.original_data = {}
+
+        # Подключение к базе данных
+        self.conn = sqlite3.connect('warehouse.db')
+        self.c = self.conn.cursor()
+
         self.operationWindow = QtWidgets.QDialog()
         self.operationWindow.setObjectName("OperationWindow")
         self.operationWindow.resize(1620, 960)
@@ -24,10 +32,10 @@ class Ui_OperationWindow(object):
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem)
         self.verticalLayout.addLayout(self.horizontalLayout_2)
+
         self.tableWidget = QtWidgets.QTableWidget(self.verticalLayoutWidget)
         self.tableWidget.setObjectName("tableWidget")
-        self.tableWidget.setColumnCount(6)
-        self.tableWidget.setRowCount(5)
+
         self.verticalLayout.addWidget(self.tableWidget)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
@@ -46,18 +54,13 @@ class Ui_OperationWindow(object):
 
         self.retranslateUi(self.operationWindow)
         QtCore.QMetaObject.connectSlotsByName(self.operationWindow)
-        self.table_name = table_name
-
-        # Подключение к базе данных
-        self.conn = sqlite3.connect('warehouse.db')
-        self.c = self.conn.cursor()
 
     def retranslateUi(self, OperationWindow):
         _translate = QtCore.QCoreApplication.translate
         OperationWindow.setWindowTitle(_translate("OperationWindow", "OperationWindow"))
-        self.choose_button.setText(_translate("OperationWindow", "Выбрать склад / клиента"))
+        self.choose_button.setText(_translate("OperationWindow", operation))
         __sortingEnabled = self.tableWidget.isSortingEnabled()
-        self.tableWidget.setSortingEnabled(False)
+        self.tableWidget.setSortingEnabled(True)
         self.tableWidget.setSortingEnabled(__sortingEnabled)
         self.confirm_button.setText(_translate("OperationWindow", "Выполнить"))
         self.cancel_button.setText(_translate("OperationWindow", "Отмена"))
@@ -65,19 +68,20 @@ class Ui_OperationWindow(object):
     def show(self):
         self.operationWindow.show()
 
-    def set_info(self, operation_type):
-        if operation_type == "списать":
+    def set_info(self, operation):
+        if operation == "списать":
             self.choose_button.setText("Списать")
-        elif operation_type == "продать":
+        elif operation == "продать":
             self.choose_button.setText("продать...")
             # выбор клиента, если клиента нет - добавить
-        elif operation_type == "переместить":
+        elif operation == "переместить":
             # выбор склада куда переместить товар
             self.choose_button.setText("Выбрать товар для перемещения")
 
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     ui = Ui_OperationWindow("Current_product")  # тест
     ui.show()

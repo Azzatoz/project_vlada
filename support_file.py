@@ -1,7 +1,7 @@
 from PyQt5 import QtCore, QtWidgets
 
 
-class Ui_DialogTable(object):
+class Support_class(object):
     table_name = ''
     connection = None
     changes_made = False

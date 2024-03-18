@@ -4,7 +4,7 @@ from support_file import SupportClass
 from PyQt5 import QtCore, QtWidgets
 import sqlite3
 
-path = '../warehouse.db'
+path = 'warehouse.db'
 
 
 class UiMainWindow(QtWidgets.QMainWindow):
@@ -59,9 +59,14 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.output_edit = QtWidgets.QTextEdit(self.central_widget)
         self.output_edit.setGeometry(QtCore.QRect(110, 620, 731, 121))
         self.output_edit.setObjectName("output_edit")
-        self.filter_btn = QtWidgets.QPushButton(self.central_widget)
-        self.filter_btn.setGeometry(QtCore.QRect(110, 10, 391, 28))
-        self.filter_btn.setObjectName("filter_btn")
+        self.filter_box = QtWidgets.QComboBox(self.central_widget)
+        self.filter_box.setGeometry(QtCore.QRect(110, 10, 391, 28))
+        self.filter_box.setObjectName("filter_box")
+        self.filter_box.addItem("Все товары")
+        self.filter_box.addItem("Списанные товары")
+        self.filter_box.addItem("Перемещенные товары")
+        self.filter_box.addItem("Проданные товары")
+        self.filter_box.addItem("Принятые товары")
         self.open_statistic_btn = QtWidgets.QPushButton(self.central_widget)
         self.open_statistic_btn.setGeometry(QtCore.QRect(850, 620, 121, 71))
         self.open_statistic_btn.setObjectName("open_statistic_btn")
@@ -78,6 +83,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.search_edit.textChanged.connect(lambda text: support_instance.search_table(text))
         self.table_widget.horizontalHeader().sectionClicked.connect(
             lambda clicked_column: support_instance.sort_data_by_column(clicked_column))
+        self.filter_box.currentIndexChanged.connect(self.filter_row)
 
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)
@@ -94,7 +100,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.sell_product_btn.setText(_translate("MainWindow", "Продать"))
         self.delete_row_dtn.setText(_translate("MainWindow", "Удалить"))
         self.open_worker_btn.setText(_translate("MainWindow", "Сотрудники"))
-        self.filter_btn.setText(_translate("MainWindow", "Фильтр по операциям"))
         self.open_statistic_btn.setText(_translate("MainWindow", "Статистика"))
         self.open_warehouse_btn.setText(_translate("MainWindow", "Склады"))
         self.cancel_button.setText(_translate("MainWindow", "Отмена"))
@@ -108,6 +113,25 @@ class UiMainWindow(QtWidgets.QMainWindow):
         ui_table = Ui_OperationWindow(operation, self.cursor)
         ui_table.show()
         UiMainWindow.ui_table_instance = ui_table
+
+    def filter_row(self):
+        selected_filter = self.filter_box.currentText()
+
+        for row in range(self.table_widget.rowCount()):
+            item = self.table_widget.item(row, 1)
+            text = item.text()
+            if selected_filter == "Проданные товары" and text == "Продажа товара":
+                self.table_widget.setRowHidden(row, False)
+            elif selected_filter == "Списанные товары" and text == "Списание товара":
+                self.table_widget.setRowHidden(row, False)
+            elif selected_filter == "Перемещенные товары" and text == "Перемещение товара на другой склад":
+                self.table_widget.setRowHidden(row, False)
+            elif selected_filter == "Принятые товары" and text == "Принятие товара":
+                self.table_widget.setRowHidden(row, False)
+            elif selected_filter == "Все товары":
+                self.table_widget.setRowHidden(row, False)
+            else:
+                self.table_widget.setRowHidden(row, True)
 
 
 if __name__ == "__main__":

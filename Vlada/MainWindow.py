@@ -1,11 +1,11 @@
 from functools import partial
 from Dima.OperationWindow import Ui_OperationWindow
-from OperationTableWindow import UiOperationTableWindow
+from Vlada.OperationTableWindow import UiOperationTableWindow
 from support_file import SupportClass
 from PyQt5 import QtCore, QtWidgets
 import sqlite3
 
-path = 'warehouse.db'
+path = '../warehouse.db'
 
 
 class UiMainWindow(QtWidgets.QMainWindow):
@@ -65,6 +65,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.output_edit = QtWidgets.QTextEdit(self.central_widget)
         self.output_edit.setGeometry(QtCore.QRect(110, 620, 731, 121))
         self.output_edit.setObjectName("output_edit")
+        self.output_edit.setReadOnly(True)
         self.filter_box = QtWidgets.QComboBox(self.central_widget)
         self.filter_box.setGeometry(QtCore.QRect(110, 10, 391, 28))
         self.filter_box.setObjectName("filter_box")
@@ -85,7 +86,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.cancel_button.setEnabled(False)
         self.setCentralWidget(self.central_widget)
 
-        self.support_instance = SupportClass(self.table_name, self.connection, self.table_widget)
+        self.support_instance = SupportClass(self.table_name, self.cursor, self.table_widget)
         self.db_data, self.count_columns = self.support_instance.display_table_data()
         self.search_edit.textChanged.connect(lambda text: self.support_instance.search_table(text))
         self.table_widget.horizontalHeader().sectionClicked.connect(
@@ -126,9 +127,14 @@ class UiMainWindow(QtWidgets.QMainWindow):
         UiMainWindow.operation_window_instance = operation_window
 
     def open_operation_table_window(self):
-        operation_table_window = UiOperationTableWindow(self.cursor)
-        operation_table_window.show()
-        UiMainWindow.operation_table_window_instance = operation_table_window
+        selected_row = self.table_widget.currentRow()
+        item = self.table_widget.item(selected_row, 0)
+        item_id = item.text()
+        for self.row_data in self.db_data:
+            if self.row_data[0] == int(item_id):
+                operation_table_window = UiOperationTableWindow(self.cursor, self.row_data)
+                operation_table_window.show()
+                UiMainWindow.operation_table_window_instance = operation_table_window
 
     def filter_row(self):
         selected_filter = self.filter_box.currentText()

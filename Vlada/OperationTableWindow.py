@@ -1,15 +1,19 @@
 from PyQt5 import QtCore, QtWidgets
+from support_file import SupportClass
 
 
 class UiOperationTableWindow(QtWidgets.QDialog):
-    def __init__(self, cursor):
+    def __init__(self, cursor, row_data):
         super(UiOperationTableWindow, self).__init__()
 
         self.cursor = cursor
+        self.row_data = row_data
+        self.table_name = 'Operation_product'
 
         self.setObjectName("Dialog")
         self.resize(1200, 800)
         self.data_edit = QtWidgets.QTextEdit(self)
+        self.data_edit.setReadOnly(True)
         self.data_edit.setGeometry(QtCore.QRect(90, 60, 651, 231))
         self.data_edit.setObjectName("data_edit")
         self.open_word_btn = QtWidgets.QPushButton(self)
@@ -39,6 +43,10 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.save_button.setGeometry(QtCore.QRect(910, 740, 93, 28))
         self.save_button.setObjectName("save_button")
 
+        self.print_row_data()
+        self.support_instance = SupportClass(self.table_name, self.cursor, self.table_widget)
+        self.support_instance.display_table_data()
+
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)
 
@@ -52,10 +60,20 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.cancel_button.setText(_translate("Dialog", "Отмена"))
         self.save_button.setText(_translate("Dialog", "Сохранить"))
 
+    def print_row_data(self):
+        self.data_edit.setPlainText(f"Уникальный идентификатор проведенной операции: {self.row_data[0]}\n"
+                                    f"Тип проведенной операции: {self.row_data[1]}\n"
+                                    f"Клиент, который запросил операцию: {self.row_data[2]}\n"
+                                    f"Сотрудник, который произвел операцию: {self.row_data[3]}\n"
+                                    f"Время, в которое провели операцию: {self.row_data[4]}\n"
+                                    f"Дополнительные характеристики операции: {self.row_data[5]}\n")
+
 
 if __name__ == "__main__":
     import sys
+    curs = None
+    data_row = None
     app = QtWidgets.QApplication(sys.argv)
-    ui = UiOperationTableWindow()
+    ui = UiOperationTableWindow(curs, data_row)
     ui.show()
     sys.exit(app.exec_())

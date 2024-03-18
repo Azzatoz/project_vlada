@@ -12,6 +12,8 @@ class UiMainWindow(QtWidgets.QMainWindow):
         super(UiMainWindow, self).__init__()
 
         self.table_name = 'Operation'
+        self.db_data = []
+        self.count_columns = None
 
         self.connection = sqlite3.connect(path)
         self.cursor = self.connection.cursor()
@@ -50,9 +52,9 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.sell_product_btn = QtWidgets.QPushButton(self.central_widget)
         self.sell_product_btn.setGeometry(QtCore.QRect(210, 50, 91, 51))
         self.sell_product_btn.setObjectName("sell_product_btn")
-        self.delete_row_dtn = QtWidgets.QPushButton(self.central_widget)
-        self.delete_row_dtn.setGeometry(QtCore.QRect(910, 100, 93, 41))
-        self.delete_row_dtn.setObjectName("delete_row_dtn")
+        self.delete_row_btn = QtWidgets.QPushButton(self.central_widget)
+        self.delete_row_btn.setGeometry(QtCore.QRect(910, 100, 93, 41))
+        self.delete_row_btn.setObjectName("delete_row_btn")
         self.open_worker_btn = QtWidgets.QPushButton(self.central_widget)
         self.open_worker_btn.setGeometry(QtCore.QRect(780, 100, 111, 41))
         self.open_worker_btn.setObjectName("open_worker_btn")
@@ -76,15 +78,18 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.cancel_button = QtWidgets.QPushButton(self.central_widget)
         self.cancel_button.setGeometry(QtCore.QRect(1010, 100, 93, 41))
         self.cancel_button.setObjectName("cancel_button")
+        self.cancel_button.setEnabled(False)
         self.setCentralWidget(self.central_widget)
 
-        support_instance = SupportClass(self.table_name, self.connection, self.table_widget)
-        support_instance.display_table_data()
-        self.search_edit.textChanged.connect(lambda text: support_instance.search_table(text))
+        self.support_instance = SupportClass(self.table_name, self.connection, self.table_widget)
+        self.db_data, self.count_columns = self.support_instance.display_table_data()
+        self.search_edit.textChanged.connect(lambda text: self.support_instance.search_table(text))
         self.table_widget.horizontalHeader().sectionClicked.connect(
-            lambda clicked_column: support_instance.sort_data_by_column(clicked_column))
+            lambda clicked_column: self.support_instance.sort_data_by_column(clicked_column))
         self.filter_box.currentIndexChanged.connect(self.filter_row)
         self.log_out_btn.clicked.connect(self.log_out)
+        self.cancel_button.clicked.connect(self.cancel_deletion_row)
+        self.delete_row_btn.clicked.connect(self.delete_and_enable_cancel_button)
 
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)
@@ -99,7 +104,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.accept_product_btn.setText(_translate("MainWindow", "Принять"))
         self.move_product_btn.setText(_translate("MainWindow", "Переместить"))
         self.sell_product_btn.setText(_translate("MainWindow", "Продать"))
-        self.delete_row_dtn.setText(_translate("MainWindow", "Удалить"))
+        self.delete_row_btn.setText(_translate("MainWindow", "Удалить"))
         self.open_worker_btn.setText(_translate("MainWindow", "Сотрудники"))
         self.open_statistic_btn.setText(_translate("MainWindow", "Статистика"))
         self.open_warehouse_btn.setText(_translate("MainWindow", "Склады"))
@@ -141,6 +146,31 @@ class UiMainWindow(QtWidgets.QMainWindow):
         auth_window = Ui_AuthorizationWindow(authorization_dialog)
         auth_window.show()
         UiMainWindow.auth_window_instance = auth_window
+
+    def cancel_deletion_row(self):
+        db_row_ids = [row[0] for row in self.db_data]
+
+        current_row_ids = []
+        for row in range(self.table_widget.rowCount()):
+            item = self.table_widget.item(row, 0)
+            current_row_ids.append(int(item.text()))
+
+        deleted_row_ids = set(db_row_ids) - set(current_row_ids)
+
+        for deleted_row_id in deleted_row_ids:
+            deleted_rows_data = next(deleted_row_data for deleted_row_data in self.db_data
+                                     if deleted_row_data[0] == deleted_row_id)
+            self.cursor.execute(f"INSERT INTO {self.table_name} VALUES "
+                                f"({','.join(['?'] * self.count_columns)})", deleted_rows_data)
+
+        self.connection.commit()
+        self.support_instance.display_table_data()
+        self.cancel_button.setEnabled(False)
+
+    def delete_and_enable_cancel_button(self):
+        self.support_instance.delete()
+        self.support_instance.save()
+        self.cancel_button.setEnabled(True)
 
 
 if __name__ == "__main__":

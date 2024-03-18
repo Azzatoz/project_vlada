@@ -24,9 +24,10 @@ class SupportClass:
             query_headers = f"PRAGMA table_info({self.table_name})"
             result_headers = self.connection.execute(query_headers).fetchall()
             headers = [column[1] for column in result_headers]
+            count_columns = len(result_headers)
 
             self.table_widget.setRowCount(len(result_data))
-            self.table_widget.setColumnCount(len(result_headers))
+            self.table_widget.setColumnCount(count_columns)
             self.table_widget.setHorizontalHeaderLabels(headers)
 
             for row_index, row_data in enumerate(result_data):
@@ -36,6 +37,7 @@ class SupportClass:
                     self.original_data[row_index, col_index] = str(col_data)
                     if col_index == 0:
                         item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+            return result_data, count_columns
 
     def get_visible_data(self):
         """
@@ -89,8 +91,8 @@ class SupportClass:
         new_value = item.text()
 
         if original_value != new_value:
-            self.table_widget.parent().save_button.setEnabled(True)
-            self.table_widget.parent().cancel_button.setEnabled(True)
+            # self.table_widget.parent().save_button.setEnabled(True)
+            # self.table_widget.parent().cancel_button.setEnabled(True)
             self.changes_made = True
 
     def search_table(self, text):
@@ -128,8 +130,8 @@ class SupportClass:
         self.table_widget.setItem(current_row_count, 0, item_id)
 
         # Разблокируем кнопку сохранения новой таблицы
-        self.table_widget.parent().save_button.setEnabled(True)
-        self.table_widget.parent().cancel_button.setEnabled(True)
+        # self.table_widget.parent().save_button.setEnabled(True)
+        # self.table_widget.parent().cancel_button.setEnabled(True)
 
         self.changes_made = True
         show_notification("Добавлена новая запись")
@@ -156,8 +158,8 @@ class SupportClass:
 
         # Сбрасываем флаг изменений
         self.changes_made = False
-        self.table_widget.parent().save_button.setEnabled(False)
-        self.table_widget.parent().cancel_button.setEnabled(False)
+        # self.table_widget.parent().save_button.setEnabled(False)
+        # self.table_widget.parent().cancel_button.setEnabled(False)
         show_notification("Отменены все изменения")
 
     def delete(self):
@@ -190,8 +192,8 @@ class SupportClass:
                     item.setText("")
 
         # Разблокируем кнопку сохранения новой таблицы
-        self.table_widget.parent().save_button.setEnabled(True)
-        self.table_widget.parent().cancel_button.setEnabled(True)
+        # self.table_widget.parent().save_button.setEnabled(True)
+        # self.table_widget.parent().cancel_button.setEnabled(True)
 
         self.changes_made = True
         show_notification("Удалены записи")
@@ -223,13 +225,10 @@ class SupportClass:
             # Фиксируем изменения в базе данных
             self.connection.commit()
 
-            # Оповещаем пользователя об успешном сохранении
-            QtWidgets.QMessageBox.information(None, "Успешное сохранение", "Изменения успешно сохранены в базе данных.")
-
             # Сбрасываем флаг изменений и блокируем кнопки
             self.changes_made = False
-            self.table_widget.parent().save_button.setEnabled(False)
-            self.table_widget.parent().cancel_button.setEnabled(False)
+            # self.table_widget.parent().save_button.setEnabled(False)
+            # self.table_widget.parent().cancel_button.setEnabled(False)
             show_notification("Изменения успешно сохранены в базе данных")
 
     def insert_record(self, new_data):

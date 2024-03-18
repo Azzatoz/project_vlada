@@ -8,12 +8,13 @@ path = 'warehouse.db'
 
 
 class UiMainWindow(QtWidgets.QMainWindow):
-    def __init__(self):
+    def __init__(self, name_user):
         super(UiMainWindow, self).__init__()
 
         self.table_name = 'Operation'
         self.db_data = []
         self.count_columns = None
+        self.name_user = name_user
 
         self.connection = sqlite3.connect(path)
         self.cursor = self.connection.cursor()
@@ -116,7 +117,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.accept_product_btn.clicked.connect(partial(self.operation_window, 'Принять'))
 
     def operation_window(self, operation):
-        operation_window = Ui_OperationWindow(operation, self.cursor)
+        operation_window = Ui_OperationWindow(operation, self.cursor, self.name_user)
         operation_window.show()
         UiMainWindow.operation_window_instance = operation_window
 
@@ -156,26 +157,33 @@ class UiMainWindow(QtWidgets.QMainWindow):
             current_row_ids.append(int(item.text()))
 
         deleted_row_ids = set(db_row_ids) - set(current_row_ids)
+        try:
+            for deleted_row_id in deleted_row_ids:
+                deleted_rows_data = next(deleted_row_data for deleted_row_data in self.db_data
+                                         if deleted_row_data[0] == deleted_row_id)
+                self.cursor.execute(f"INSERT INTO {self.table_name} VALUES "
+                                    f"({','.join(['?'] * self.count_columns)})", deleted_rows_data)
 
-        for deleted_row_id in deleted_row_ids:
-            deleted_rows_data = next(deleted_row_data for deleted_row_data in self.db_data
-                                     if deleted_row_data[0] == deleted_row_id)
-            self.cursor.execute(f"INSERT INTO {self.table_name} VALUES "
-                                f"({','.join(['?'] * self.count_columns)})", deleted_rows_data)
-
-        self.connection.commit()
-        self.support_instance.display_table_data()
-        self.cancel_button.setEnabled(False)
+            self.connection.commit()
+            self.support_instance.display_table_data()
+            self.output_edit.setPlainText(f"Изменения в базе данных отменены.")
+            self.cancel_button.setEnabled(False)
+        except sqlite3.Error:
+            self.textEdit.setPlainText("Не удалось отменить изменения в базе данных.")
 
     def delete_and_enable_cancel_button(self):
-        self.support_instance.delete()
-        self.support_instance.save()
-        self.cancel_button.setEnabled(True)
+        try:
+            self.support_instance.save()
+            self.cancel_button.setEnabled(True)
+            self.output_edit.setText(f"Запись(и) успешно удалены из базы данных.")
+        except sqlite3.Error:
+            self.output_edit.setText("Не удалось удалить запись(и) из базы данных.")
 
 
 if __name__ == "__main__":
     import sys
+    user_name = None
     app = QtWidgets.QApplication(sys.argv)
-    ui = UiMainWindow()
+    ui = UiMainWindow(user_name)
     ui.show()
     sys.exit(app.exec_())

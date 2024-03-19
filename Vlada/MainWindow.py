@@ -1,6 +1,7 @@
 from functools import partial
 from Dima.OperationWindow import Ui_OperationWindow
 from Vlada.OperationTableWindow import UiOperationTableWindow
+from Vlada.StandardDataWindow import UiStandardDataWindow
 from support_file import SupportClass
 from PyQt5 import QtCore, QtWidgets
 import sqlite3
@@ -121,11 +122,19 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.move_product_btn.clicked.connect(partial(self.open_operation_window, 'Переместить'))
         self.sell_product_btn.clicked.connect(partial(self.open_operation_window, 'Продать'))
         self.accept_product_btn.clicked.connect(partial(self.open_operation_window, 'Принять'))
+        self.open_worker_btn.clicked.connect(partial(self.open_standard_data_window, 'Worker'))
+        self.open_client_btn.clicked.connect(partial(self.open_standard_data_window, 'Client'))
+        self.open_warehouse_btn.clicked.connect(partial(self.open_standard_data_window, 'Warehouse'))
 
     def open_operation_window(self, operation):
         operation_window = Ui_OperationWindow(operation, self.connection, self.name_user)
         operation_window.show()
         UiMainWindow.operation_window_instance = operation_window
+
+    def open_standard_data_window(self, table_name):
+        standard_data_window = UiStandardDataWindow(table_name, self.connection)
+        standard_data_window.show()
+        UiMainWindow.standard_data_window_instance = standard_data_window
 
     def open_operation_table_window(self):
         selected_row = self.table_widget.currentRow()

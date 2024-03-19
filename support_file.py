@@ -77,7 +77,6 @@ class SupportClass:
         self.table_widget.setRowCount(len(self.result_data))
 
         for row_index, row_data in enumerate(self.result_data):
-            print(self.result_data)
             for col_index, col_data in enumerate(row_data):
                 if col_data is None:
                     col_data = ''
@@ -256,10 +255,13 @@ class SupportClass:
             query_data = f"SELECT * FROM {self.table_name}"
             result_data = self.connection.execute(query_data).fetchall()
 
+            self.result_data.clear()
+
             for row in range(self.table_widget.rowCount()):
                 new_data = [
                     self.table_widget.item(row, col).text() if self.table_widget.item(row, col) is not None else '' for
                     col in range(self.table_widget.columnCount())]
+                self.result_data.append(new_data)
 
                 if row >= len(result_data):
                     # Новая запись, вставляем её в базу данных

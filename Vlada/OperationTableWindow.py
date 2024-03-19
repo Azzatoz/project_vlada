@@ -31,6 +31,8 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.table_widget.setObjectName("table_widget")
         self.table_widget.setColumnCount(0)
         self.table_widget.setRowCount(0)
+        self.table_widget.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.table_widget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.delete_btn = QtWidgets.QPushButton(self)
         self.delete_btn.setGeometry(QtCore.QRect(1020, 320, 93, 28))
         self.delete_btn.setObjectName("delete_btn")
@@ -44,12 +46,16 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.save_button.setGeometry(QtCore.QRect(910, 740, 93, 28))
         self.save_button.setObjectName("save_button")
 
+        self.enable_buttons()
         self.print_row_data()
         self.support_instance = SupportClass(self.table_name, self.cursor, self.table_widget)
         self.support_instance.display_table_data(self.row_data[0])
         self.search_edit.textChanged.connect(lambda text: self.support_instance.search_table(text))
         self.table_widget.horizontalHeader().sectionClicked.connect(
             lambda clicked_column: self.support_instance.sort_data_by_column(clicked_column))
+        self.delete_btn.clicked.connect(lambda: self.button_action("delete"))
+        self.save_button.clicked.connect(lambda: self.button_action("save"))
+        self.cancel_button.clicked.connect(lambda: self.button_action("cancel"))
 
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)
@@ -73,6 +79,22 @@ class UiOperationTableWindow(QtWidgets.QDialog):
                                     f"Сотрудник, который произвел операцию: {self.row_data[3]}\n"
                                     f"Время, в которое провели операцию: {self.row_data[4]}\n"
                                     f"Дополнительные характеристики операции: {additional_info}\n")
+
+    def button_action(self, action_type):
+        if action_type == "delete":
+            self.support_instance.delete()
+            self.cancel_button.setEnabled(True)
+            self.save_button.setEnabled(True)
+        elif action_type == "save":
+            self.support_instance.save()
+            self.enable_buttons()
+        elif action_type == "cancel":
+            self.support_instance.cancel()
+            self.enable_buttons()
+
+    def enable_buttons(self):
+        self.cancel_button.setEnabled(False)
+        self.save_button.setEnabled(False)
 
 
 if __name__ == "__main__":

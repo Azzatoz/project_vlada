@@ -17,15 +17,18 @@ class SupportClass:
         self.original_data = {}
         self.table_widget.sort_order = None
 
-    def display_table_data(self):
+    def display_table_data(self, row_id=None):
         if self.connection and self.table_name:
-            query_data = f"SELECT * FROM {self.table_name}"
-            result_data = self.connection.execute(query_data).fetchall()
-            initial_result_data = result_data[:]
             query_headers = f"PRAGMA table_info({self.table_name})"
             result_headers = self.connection.execute(query_headers).fetchall()
-            headers = [column[1] for column in result_headers]
-            count_columns = len(result_headers)
+            headers = [column[1] for column in result_headers if column[1] != 'operation_id']
+            count_columns = len(headers)
+            columns = ', '.join(headers)
+            query_data = f"SELECT {columns} FROM {self.table_name}"
+            if self.table_name == 'Operation_product':
+                query_data += f" WHERE operation_id = {row_id}"
+            result_data = self.connection.execute(query_data).fetchall()
+            initial_result_data = result_data[:]
 
             self.table_widget.setRowCount(len(result_data))
             self.table_widget.setColumnCount(count_columns)
@@ -43,16 +46,36 @@ class SupportClass:
                     new_row_data = row_data[:2] + (client_name, worker_name) + row_data[4:]
                     result_data[row_index] = new_row_data
 
+            elif self.table_name == 'Operation_product':
+                product_property_names = [
+                    self.connection.execute(
+                        f"SELECT DISTINCT current_product_name FROM Product_property "
+                        f"WHERE current_product_id = {row[1]}"
+                    ).fetchone()[0] for row in result_data
+                ]
+
+                warehouse_names = [
+                    self.connection.execute(
+                        f"SELECT name FROM Warehouse WHERE id = {row[2]}"
+                    ).fetchone()[0] for row in result_data
+                ]
+
+                for i, row_data in enumerate(result_data):
+                    client_name = product_property_names[i] if i < len(product_property_names) else ""
+                    worker_name = warehouse_names[i] if i < len(warehouse_names) else ""
+                    new_row_data = row_data[:1] + (client_name, worker_name) + row_data[3:]
+                    result_data[i] = new_row_data
+
             for row_index, row_data in enumerate(result_data):
                 for col_index, col_data in enumerate(row_data):
-                    if col_data == 'None':
+                    if col_data is None:
                         col_data = ''
                     item = QtWidgets.QTableWidgetItem(str(col_data))
                     self.table_widget.setItem(row_index, col_index, item)
                     self.original_data[row_index, col_index] = str(col_data)
                     if col_index == 0:
                         item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
-            return initial_result_data, count_columns
+            return initial_result_data, result_data, count_columns
 
     def get_visible_data(self):
         """

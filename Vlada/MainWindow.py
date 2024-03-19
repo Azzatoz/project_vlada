@@ -13,7 +13,8 @@ class UiMainWindow(QtWidgets.QMainWindow):
         super(UiMainWindow, self).__init__()
 
         self.table_name = 'Operation'
-        self.db_data = []
+        self.initial_db_data = []
+        self.change_db_data = []
         self.count_columns = None
         self.name_user = name_user
 
@@ -87,7 +88,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.central_widget)
 
         self.support_instance = SupportClass(self.table_name, self.connection, self.table_widget)
-        self.db_data, self.count_columns = self.support_instance.display_table_data()
+        self.initial_db_data, self.change_db_data, self.count_columns = self.support_instance.display_table_data()
         self.search_edit.textChanged.connect(lambda text: self.support_instance.search_table(text))
         self.table_widget.horizontalHeader().sectionClicked.connect(
             lambda clicked_column: self.support_instance.sort_data_by_column(clicked_column))
@@ -130,7 +131,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         selected_row = self.table_widget.currentRow()
         item = self.table_widget.item(selected_row, 0)
         item_id = item.text()
-        for self.row_data in self.db_data:
+        for self.row_data in self.change_db_data:
             if self.row_data[0] == int(item_id):
                 operation_table_window = UiOperationTableWindow(self.connection, self.row_data)
                 operation_table_window.show()
@@ -164,7 +165,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         UiMainWindow.auth_window_instance = auth_window
 
     def cancel_deletion_row(self):
-        db_row_ids = [row[0] for row in self.db_data]
+        db_row_ids = [row[0] for row in self.initial_db_data]
 
         current_row_ids = []
         for row in range(self.table_widget.rowCount()):
@@ -174,7 +175,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         deleted_row_ids = set(db_row_ids) - set(current_row_ids)
         try:
             for deleted_row_id in deleted_row_ids:
-                deleted_rows_data = next(deleted_row_data for deleted_row_data in self.db_data
+                deleted_rows_data = next(deleted_row_data for deleted_row_data in self.initial_db_data
                                          if deleted_row_data[0] == deleted_row_id)
                 self.cursor.execute(f"INSERT INTO {self.table_name} VALUES "
                                     f"({','.join(['?'] * self.count_columns)})", deleted_rows_data)

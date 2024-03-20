@@ -215,6 +215,7 @@ class SupportClass:
         Удаляет выбранные строки / стирает данные в ячейках
         """
         selected_rows = self.table_widget.selectionModel().selectedRows()
+        deleted_row_ids = []
 
         if selected_rows:
             # Если выделены строки, то удаляем их
@@ -230,6 +231,7 @@ class SupportClass:
                 if deleted_row_id is not None:
                     delete_query = f"DELETE FROM {self.table_name} WHERE id = ?;"
                     self.connection.execute(delete_query, (deleted_row_id,))
+                    deleted_row_ids.append(deleted_row_id)
 
         else:
             # Если нет выделенных строк, то очищаем данные в выделенной ячейке (за исключением ячейки с id)
@@ -245,6 +247,7 @@ class SupportClass:
 
         self.changes_made = True
         show_notification("Удалены записи")
+        return deleted_row_ids
 
     def save(self):
         """
@@ -269,7 +272,7 @@ class SupportClass:
                 else:
                     old_data = result_data[row]
 
-                    if self.table_name != 'Operation':
+                    if self.table_name not in ['Operation', 'Operation_product']:
 
                         if new_data != old_data:
                             # Обновляем существующую запись в базе данных

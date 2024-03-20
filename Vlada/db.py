@@ -69,6 +69,7 @@ def create_database():
                     warehouse_id INT NOT NULL,
                     delivery_date INT NOT NULL,
                     expiration_date_operation INT,
+                    destination VARCHAR(30),
                     FOREIGN KEY(delivery_id) REFERENCES Operation(id),
                     FOREIGN KEY(warehouse_id) REFERENCES Warehouse(id)
                 );
@@ -141,11 +142,11 @@ def generate_data():
             ('Списание товара', 3, 3, '2024-03-20', None)
         ],
         'Current_product': [
-            (10, 1, 1, '2024-03-17', '2024-03-17'),
-            (15, 1, 2, '2024-03-18', '2024-03-17'),
-            (20, 2, 1, '2024-03-19', '2024-03-17'),
-            (25, 3, 3, '2024-03-20', '2024-03-17'),
-            (30, 4, 2, '2024-03-21', '2024-03-17')
+            (10, 1, 1, '2024-03-17', '2024-03-17', None),
+            (15, 1, 2, '2024-03-18', '2024-03-17', None),
+            (20, 2, 1, '2024-03-19', '2024-03-17', None),
+            (25, 3, 3, '2024-03-20', '2024-03-17', None),
+            (30, 4, 2, '2024-03-21', '2024-03-17', None)
         ],
         'Product_property': [
             (1, 'Товар 1', 'Категория 1', 'Характеристики', '2024-03-17', 100, 12340, None),

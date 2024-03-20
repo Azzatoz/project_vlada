@@ -65,11 +65,11 @@ def create_database():
                 CREATE TABLE IF NOT EXISTS Current_product (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     quantity INT NOT NULL,
-                    operation_id NOT NULL,
+                    delivery_id NOT NULL,
                     warehouse_id INT NOT NULL,
                     delivery_date INT NOT NULL,
                     expiration_date_operation INT,
-                    FOREIGN KEY(operation_id) REFERENCES Operation(id),
+                    FOREIGN KEY(delivery_id) REFERENCES Operation(id),
                     FOREIGN KEY(warehouse_id) REFERENCES Warehouse(id)
                 );
             """)
@@ -94,7 +94,7 @@ def create_database():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     operation_id INT NOT NULL,
                     product_id INT NOT NULL,
-                    warehouse_id INT,
+                    warehouse_id INT NOT NULL,
                     quantity INT NOT NULL,
                     condition VARCHAR(30) NOT NULL,
                     FOREIGN KEY(operation_id) REFERENCES Operation(id),
@@ -155,11 +155,11 @@ def generate_data():
             (4, 'Товар 4', 'Категория 4', 'Характеристики', '2024-03-17', 170, 12343, None)
         ],
         'Operation_product': [
-            (1, 1, None, 10, 'Доставлен'),
+            (1, 1, 2, 10, 'Доставлен'),
             (2, 2, 1, 11, 'На складе'),
-            (2, 3, None, 12, 'На складе'),
+            (2, 3, 3, 12, 'На складе'),
             (3, 3, 1, 13, 'На складе'),
-            (4, 1, None, 14, 'Доставлен')
+            (4, 1, 3, 14, 'Доставлен')
         ]
     }
 

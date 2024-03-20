@@ -16,43 +16,76 @@ class SupportClass:
         self.table_widget = table_widget
         self.original_data = {}
         self.table_widget.sort_order = None
+        self.row_id = None
+        self.result_data = []
+        self.initial_result_data = []
+        self.count_columns = None
 
-    def display_table_data(self):
-        if self.connection and self.table_name:
-            query_data = f"SELECT * FROM {self.table_name}"
-            result_data = self.connection.execute(query_data).fetchall()
-            initial_result_data = result_data[:]
-            query_headers = f"PRAGMA table_info({self.table_name})"
-            result_headers = self.connection.execute(query_headers).fetchall()
-            headers = [column[1] for column in result_headers]
-            count_columns = len(result_headers)
+    def display_table_data(self, row_id=None, existing_data=None):
+        if existing_data:
+            self.result_data = existing_data
 
-            self.table_widget.setRowCount(len(result_data))
-            self.table_widget.setColumnCount(count_columns)
-            self.table_widget.setHorizontalHeaderLabels(headers)
+        else:
+            if self.connection and self.table_name:
+                query_headers = f"PRAGMA table_info({self.table_name})"
+                result_headers = self.connection.execute(query_headers).fetchall()
+                headers = [column[1] for column in result_headers if column[1] != 'operation_id']
+                self.count_columns = len(headers)
+                columns = ', '.join(headers)
+                query_data = f"SELECT {columns} FROM {self.table_name}"
+                if self.table_name == 'Operation_product':
+                    query_data += f" WHERE operation_id = {row_id}"
+                self.result_data = self.connection.execute(query_data).fetchall()
+                self.initial_result_data = self.result_data[:]
+                self.row_id = row_id
 
-            if self.table_name == 'Operation':
-                query_data = f"SELECT name FROM Client UNION ALL SELECT name FROM Worker"
-                names = [name[0] for name in self.connection.execute(query_data).fetchall()]
-                client_names = names[:len(result_data)]
-                worker_names = names[len(result_data):]
+                self.table_widget.setColumnCount(self.count_columns)
+                self.table_widget.setHorizontalHeaderLabels(headers)
 
-                for row_index, row_data in enumerate(result_data):
-                    client_name = client_names[row_index] if row_index < len(client_names) else ""
-                    worker_name = worker_names[row_index] if row_index < len(worker_names) else ""
-                    new_row_data = row_data[:2] + (client_name, worker_name) + row_data[4:]
-                    result_data[row_index] = new_row_data
+                if self.table_name == 'Operation':
+                    query_data = f"SELECT name FROM Client UNION ALL SELECT name FROM Worker"
+                    names = [name[0] for name in self.connection.execute(query_data).fetchall()]
+                    client_names = names[:len(self.result_data)]
+                    worker_names = names[len(self.result_data):]
 
-            for row_index, row_data in enumerate(result_data):
-                for col_index, col_data in enumerate(row_data):
-                    if col_data == 'None':
-                        col_data = ''
-                    item = QtWidgets.QTableWidgetItem(str(col_data))
-                    self.table_widget.setItem(row_index, col_index, item)
-                    self.original_data[row_index, col_index] = str(col_data)
-                    if col_index == 0:
-                        item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
-            return initial_result_data, count_columns
+                    for row_index, row_data in enumerate(self.result_data):
+                        client_name = client_names[row_index] if row_index < len(client_names) else ""
+                        worker_name = worker_names[row_index] if row_index < len(worker_names) else ""
+                        new_row_data = row_data[:2] + (client_name, worker_name) + row_data[4:]
+                        self.result_data[row_index] = new_row_data
+
+                elif self.table_name == 'Operation_product':
+                    product_property_names = [
+                        self.connection.execute(
+                            f"SELECT DISTINCT current_product_name FROM Product_property "
+                            f"WHERE current_product_id = {row[1]}"
+                        ).fetchone()[0] for row in self.result_data
+                    ]
+
+                    warehouse_names = [
+                        self.connection.execute(
+                            f"SELECT name FROM Warehouse WHERE id = {row[2]}"
+                        ).fetchone()[0] for row in self.result_data
+                    ]
+
+                    for i, row_data in enumerate(self.result_data):
+                        client_name = product_property_names[i] if i < len(product_property_names) else ""
+                        worker_name = warehouse_names[i] if i < len(warehouse_names) else ""
+                        new_row_data = row_data[:1] + (client_name, worker_name) + row_data[3:]
+                        self.result_data[i] = new_row_data
+
+        self.table_widget.setRowCount(len(self.result_data))
+
+        for row_index, row_data in enumerate(self.result_data):
+            for col_index, col_data in enumerate(row_data):
+                if col_data is None:
+                    col_data = ''
+                item = QtWidgets.QTableWidgetItem(str(col_data))
+                self.table_widget.setItem(row_index, col_index, item)
+                self.original_data[row_index, col_index] = str(col_data)
+                if col_index == 0:
+                    item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+        return self.initial_result_data, self.result_data, self.count_columns
 
     def get_visible_data(self):
         """
@@ -169,7 +202,7 @@ class SupportClass:
                 return
 
         # Восстанавливаем исходные данные
-        self.display_table_data()
+        self.display_table_data(self.row_id, self.result_data)
 
         # Сбрасываем флаг изменений
         self.changes_made = False
@@ -222,10 +255,13 @@ class SupportClass:
             query_data = f"SELECT * FROM {self.table_name}"
             result_data = self.connection.execute(query_data).fetchall()
 
+            self.result_data.clear()
+
             for row in range(self.table_widget.rowCount()):
                 new_data = [
                     self.table_widget.item(row, col).text() if self.table_widget.item(row, col) is not None else '' for
                     col in range(self.table_widget.columnCount())]
+                self.result_data.append(new_data)
 
                 if row >= len(result_data):
                     # Новая запись, вставляем её в базу данных

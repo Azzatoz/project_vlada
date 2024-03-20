@@ -25,11 +25,14 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.search_edit = QtWidgets.QLineEdit(self)
         self.search_edit.setGeometry(QtCore.QRect(90, 330, 651, 22))
         self.search_edit.setObjectName("search_edit")
+        self.search_edit.setPlaceholderText("Искать:")
         self.table_widget = QtWidgets.QTableWidget(self)
         self.table_widget.setGeometry(QtCore.QRect(90, 360, 1021, 371))
         self.table_widget.setObjectName("table_widget")
         self.table_widget.setColumnCount(0)
         self.table_widget.setRowCount(0)
+        self.table_widget.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.table_widget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.delete_btn = QtWidgets.QPushButton(self)
         self.delete_btn.setGeometry(QtCore.QRect(1020, 320, 93, 28))
         self.delete_btn.setObjectName("delete_btn")
@@ -43,12 +46,16 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.save_button.setGeometry(QtCore.QRect(910, 740, 93, 28))
         self.save_button.setObjectName("save_button")
 
+        self.enable_buttons()
         self.print_row_data()
         self.support_instance = SupportClass(self.table_name, self.cursor, self.table_widget)
-        self.support_instance.display_table_data()
+        self.support_instance.display_table_data(self.row_data[0])
         self.search_edit.textChanged.connect(lambda text: self.support_instance.search_table(text))
         self.table_widget.horizontalHeader().sectionClicked.connect(
             lambda clicked_column: self.support_instance.sort_data_by_column(clicked_column))
+        self.delete_btn.clicked.connect(lambda: self.button_action("delete"))
+        self.save_button.clicked.connect(lambda: self.button_action("save"))
+        self.cancel_button.clicked.connect(lambda: self.button_action("cancel"))
 
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)
@@ -59,17 +66,35 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.open_word_btn.setText(_translate("Dialog", "Открыть word-документ"))
         self.open_excel_btn.setText(_translate("Dialog", "Открыть excel-документ"))
         self.delete_btn.setText(_translate("Dialog", "Удалить"))
-        self.add_btn.setText(_translate("Dialog", "Добавить"))
+        self.add_btn.setText(_translate("Dialog", "Вернуть"))
         self.cancel_button.setText(_translate("Dialog", "Отмена"))
         self.save_button.setText(_translate("Dialog", "Сохранить"))
 
     def print_row_data(self):
-        self.data_edit.setPlainText(f"Уникальный идентификатор проведенной операции: {self.row_data[0]}\n"
-                                    f"Тип проведенной операции: {self.row_data[1]}\n"
-                                    f"Клиент, который запросил операцию: {self.row_data[2]}\n"
+        client = self.row_data[2] if self.row_data[2] is not None else ''
+        additional_info = self.row_data[5] if self.row_data[5] is not None else ''
+
+        self.data_edit.setPlainText(f"Тип проведенной операции: {self.row_data[1]}\n"
+                                    f"Клиент, который запросил операцию: {client}\n"
                                     f"Сотрудник, который произвел операцию: {self.row_data[3]}\n"
                                     f"Время, в которое провели операцию: {self.row_data[4]}\n"
-                                    f"Дополнительные характеристики операции: {self.row_data[5]}\n")
+                                    f"Дополнительные характеристики операции: {additional_info}\n")
+
+    def button_action(self, action_type):
+        if action_type == "delete":
+            self.support_instance.delete()
+            self.cancel_button.setEnabled(True)
+            self.save_button.setEnabled(True)
+        elif action_type == "save":
+            self.support_instance.save()
+            self.enable_buttons()
+        elif action_type == "cancel":
+            self.support_instance.cancel()
+            self.enable_buttons()
+
+    def enable_buttons(self):
+        self.cancel_button.setEnabled(False)
+        self.save_button.setEnabled(False)
 
 
 if __name__ == "__main__":

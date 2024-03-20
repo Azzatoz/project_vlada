@@ -1,6 +1,7 @@
 import sqlite3
 from PyQt5 import QtCore, QtWidgets
 from Vlada.MainWindow import UiMainWindow
+from support_file import show_notification
 
 
 class Ui_AuthorizationWindow(object):

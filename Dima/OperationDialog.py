@@ -113,10 +113,10 @@ class Ui_OperationDialog(object):
         self.retranslateUi(self.operationDialog)
         QtCore.QMetaObject.connectSlotsByName(self.operationDialog)
 
-        self.c = Cursor
-        self.support = SupportClass(self.table_name, self.c, self.table_widget)
+        self.cursor = Cursor
+        self.support = SupportClass(self.table_name, self.cursor, self.table_widget)
         self.operation_action(operation)  # Вызываем метод для установки действий кнопок в зависимости от операции
-        self.support.display_table_data()  # Отображаем таблицу
+        self.display_current_product_data(self.cursor, self.operation_type)  # Отображаем таблицу
         self.cancel_button.clicked.connect(self.support.cancel)
 
     def retranslateUi(self, operationDialog):
@@ -133,51 +133,70 @@ class Ui_OperationDialog(object):
     def show(self):
         self.operationDialog.show()
 
-    def display_table_data(self, operation_type):
-        if self.connection and self.table_name:
-            # Запрос данных из базы данных
-            query_data = f"SELECT * FROM {self.table_name}"
-            result_data = self.connection.execute(query_data).fetchall()
-            initial_result_data = result_data[:]
+    def display_current_product_data(self, cursor, operation_type, selected_row=None, selected_items=None):
+        if cursor and self.table_name == 'Current_product':
+            try:
+                # 1. Получаем данные из таблицы Current_product
+                query_data = f"SELECT id, quantity, delivery_id, warehouse_id, delivery_date FROM {self.table_name}"
+                cursor.execute(query_data)
+                result_data = cursor.fetchall()
 
-            # Запрос заголовков таблицы
-            query_headers = f"PRAGMA table_info({self.table_name})"
-            result_headers = self.connection.execute(query_headers).fetchall()
-            headers = [column[1] for column in result_headers]
-            count_columns = len(result_headers)
+                # 2. Получаем имена операторов и складов
+                operator_names = [
+                    cursor.execute(
+                        f"SELECT name FROM Client WHERE id = {row[2]}"
+                    ).fetchone()[0] for row in result_data
+                ]
+                warehouse_names = [
+                    cursor.execute(
+                        f"SELECT name FROM Warehouse WHERE id = {row[3]}"
+                    ).fetchone()[0] for row in result_data
+                ]
 
-            # Добавление нового заголовка в зависимости от типа операции
-            if operation_type == "Продать":
-                headers.append("Кому продать")
-            elif operation_type == "Переместить":
-                headers.append("Переместить в")
+                # 3. Создаем новый столбец с заголовком в зависимости от типа операции
+                destination_column_name = "Кому продать" if operation_type == "Продать" else "Переместить в"
 
-            # Установка размеров таблицы и заголовков
-            self.table_widget.setRowCount(len(result_data))
-            self.table_widget.setColumnCount(
-                count_columns + 1)  # Добавляем один столбец для "Переместить в" или "Кому продать"
-            self.table_widget.setHorizontalHeaderLabels(headers)
+                # 4. Обновляем заголовки таблицы, добавляя новый столбец
+                headers = ['ID', 'Количество', 'Оператор', 'Склад', 'Дата поставки', destination_column_name]
+                num_cols = len(headers)
 
-            # Заполнение таблицы данными
-            for row_index, row_data in enumerate(result_data):
-                for col_index, col_data in enumerate(row_data):
-                    if col_data == 'None':
-                        col_data = ''
-                    item = QtWidgets.QTableWidgetItem(str(col_data))
-                    self.table_widget.setItem(row_index, col_index, item)
-                    self.original_data[row_index, col_index] = str(col_data)
-                    if col_index == 0:
-                        item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+                # Устанавливаем количество строк и столбцов
+                num_rows = len(result_data)
 
-                    # Добавление данных в новый столбец в зависимости от типа операции
-                    if operation_type == "Продать":
-                        if col_index == count_columns:
-                            item = QtWidgets.QTableWidgetItem("Кому продать")  # Замените на данные о клиенте
-                            self.table_widget.setItem(row_index, col_index, item)
-                    elif operation_type == "Переместить":
-                        if col_index == count_columns:
-                            item = QtWidgets.QTableWidgetItem("Переместить в")  # Замените на данные о складе
-                            self.table_widget.setItem(row_index, col_index, item)
+                # Устанавливаем количество строк и столбцов в table_widget
+                self.table_widget.setRowCount(num_rows)
+                self.table_widget.setColumnCount(num_cols)
+                self.table_widget.setHorizontalHeaderLabels(headers)
+
+                # 5. Заполняем таблицу данными
+                for row_index, row_data in enumerate(result_data):
+                    # Получаем данные строки
+                    product_id, quantity, delivery_id, warehouse_id, delivery_date = row_data
+
+                    # Создаем элементы QTableWidgetItem для каждого столбца
+                    item_id = QtWidgets.QTableWidgetItem(str(product_id))
+                    item_quantity = QtWidgets.QTableWidgetItem(str(quantity))
+                    item_operator = QtWidgets.QTableWidgetItem(operator_names[row_index])
+                    item_warehouse = QtWidgets.QTableWidgetItem(warehouse_names[row_index])
+                    item_delivery_date = QtWidgets.QTableWidgetItem(str(delivery_date))
+                    item_destination = QtWidgets.QTableWidgetItem("")  # Создаем пустой элемент
+
+                    # Устанавливаем элементы в соответствующие ячейки
+                    self.table_widget.setItem(row_index, 0, item_id)
+                    self.table_widget.setItem(row_index, 1, item_quantity)
+                    self.table_widget.setItem(row_index, 2, item_operator)
+                    self.table_widget.setItem(row_index, 3, item_warehouse)
+                    self.table_widget.setItem(row_index, 4, item_delivery_date)
+
+                    # Если передана выбранная строка и данные для вставки
+                    if selected_row is not None and selected_items is not None:
+                        # Заполняем выбранную строку данными из selected_items
+                        for col_index, col_data in enumerate(selected_items):
+                            item = QtWidgets.QTableWidgetItem(str(col_data))
+                            self.table_widget.setItem(selected_row, col_index, item)
+
+            except Exception as e:
+                print("Ошибка при отображении данных:", e)
 
     # TODO: добавить в support_file
     def open_operation_table_window(self):
@@ -189,13 +208,6 @@ class Ui_OperationDialog(object):
                 operation_table_window = UiOperationTableWindow(self.connection, self.row_data)
                 operation_table_window.show()
                 UiMainWindow.operation_table_window_instance = operation_table_window
-
-    # TODO: добавить в support_file
-    def get_selected_items(self):
-        selected_items = []
-        for item in self.table_widget.selectedItems():
-            selected_items.append(item.text())
-        return selected_items
 
     def operation_action(self, operation_type):
         if operation_type == "Списать":
@@ -222,38 +234,70 @@ class Ui_OperationDialog(object):
         # Вызываем метод delete_rows для удаления выделенных строк
         self.support.delete_rows()
 
+    # TODO: добавить в support_file
+    def get_selected_items(self):
+        selected_items = []
+        selected_rows = set()
+        for item in self.table_widget.selectedItems():
+            selected_rows.add(item.row())
+
+        # Проверяем, есть ли выделенные строки
+        if not selected_rows:
+            return selected_items
+
+        # Получаем все данные из выделенных строк
+        for row in selected_rows:
+            row_data = []
+            for col in range(self.table_widget.columnCount()):
+                item = self.table_widget.item(row, col)
+                if item is not None:
+                    row_data.append(item.text())
+                else:
+                    row_data.append("")
+            selected_items.append(row_data)
+        return selected_items
+
     def sell_or_move(self, operation_type):
-        selected_items = self.get_selected_items()
+        selected_items = self.get_selected_items()  # Получаем выбранные элементы из таблицы
 
-        choose_dialog = QtWidgets.QDialog()
-        choose_dialog_ui = ChooseDialog(self.c, selected_items, operation_type)
+        # Получаем заголовки текущей таблицы
+        column_headers = []
+        for col in range(self.table_widget.columnCount()):
+            header = self.table_widget.horizontalHeaderItem(col).text()
+            column_headers.append(header)
 
-        # Установка интерфейса для диалогового окна
-        choose_dialog_ui.verticalLayoutWidget.setParent(choose_dialog)
+        # Создаем экземпляр диалогового окна и передаем выбранные строки и заголовки
+        choose_dialog = ChooseDialog(self.cursor, selected_items, operation_type, column_headers)
 
-        # Подключаем сигнал к слоту используя объект диалогового окна
-        choose_dialog_ui.data_selected.connect(lambda data: self.handle_sell_move_data(data))
-
-        choose_dialog.show()
-        # для сохранения действия в переменной чтобы окно не закрывалось
+        # Сохраняем экземпляр диалогового окна в переменной, чтобы окно не закрывалось
         Ui_OperationDialog.operation_dialog_instance = choose_dialog
 
-    def handle_sell_move_data(self, data):
-        # data содержит информацию о том, кому продавать или куда перемещать товары
-        selected_rows = self.table_widget.selectedItems()
-        if selected_rows:
-            for item in selected_rows:
-                row = item.row()
-                if isinstance(data, str):
-                    item.setText(data)  # Если передана строка (имя клиента или склад), установить ее в ячейку
-                else:
-                    # Если передан список, каждому элементу списка соответствует строка таблицы
-                    for i, val in enumerate(data):
-                        if row + i < self.table_widget.rowCount():
-                            self.table_widget.setItem(row + i, self.table_widget.columnCount() - 1,
-                                                      QtWidgets.QTableWidgetItem(val))
+        # Отображаем диалоговое окно
+        choose_dialog.ChooseDialog.show()
 
-    def write_operation(self):
+        # Подключаем сигнал к слоту для передачи данных после подтверждения
+        choose_dialog.data_selected.connect(lambda data: self.handle_sell_move_data(data))
+
+    def handle_sell_move_data(self, selected_destination):
+        # Получаем список индексов выбранных строк
+        selected_rows = set()
+        for item in self.table_widget.selectedItems():
+            selected_rows.add(item.row())
+
+        # Проверяем, есть ли выделенные строки
+        if not selected_rows:
+            return
+
+        # Преобразуем selected_destination в строку, если это список
+        selected_destination = selected_destination[0] if isinstance(selected_destination,
+                                                                     list) else selected_destination
+
+        # Устанавливаем выбранный элемент в каждую выбранную строку
+        for row_index in selected_rows:
+            item = QtWidgets.QTableWidgetItem(str(selected_destination))
+            self.table_widget.setItem(row_index, 5, item)
+
+    def write_operation(self, additional_characteristics=None):
         # Получаем тип операции
         operation_type = self.operation_type
 
@@ -263,9 +307,6 @@ class Ui_OperationDialog(object):
         # Получаем текущее время
         import time
         current_time = int(time.time())
-
-        # Получаем дополнительные характеристики операции
-        additional_characteristics = self.additional_characteristics
 
         try:
             # Получаем id работника по его имени
@@ -304,8 +345,8 @@ class Ui_OperationDialog(object):
 
             # Удаление выбранного товара из таблицы Current_product для списания и продажи
             if operation_type in ["Списать", "Продать"]:
-                selected_row = self.tableWidget.currentRow()
-                item = self.tableWidget.item(selected_row, 0)
+                selected_row = self.table_widget.currentRow()
+                item = self.table_widget.item(selected_row, 0)
                 item_id = item.text()
                 self.c.execute("DELETE FROM Current_product WHERE id=?", (item_id,))
                 self.connection.commit()
@@ -326,11 +367,11 @@ class Ui_OperationDialog(object):
                     return
 
                 # Обновляем информацию о складе у выбранного товара
-                selected_rows = self.tableWidget.selectedItems()
+                selected_rows = self.table_widget.selectedItems()
                 if selected_rows:
                     for item in selected_rows:
                         row = item.row()
-                        item_id = self.tableWidget.item(row, 0).text()
+                        item_id = self.table_widget.item(row, 0).text()
                         # Выполняем соответствующий запрос обновления в базе данных
                         if operation_type == "Переместить":
                             self.c.execute("UPDATE Current_product SET warehouse_id=? WHERE id=?",
@@ -354,6 +395,6 @@ if __name__ == "__main__":
     conn = sqlite3.connect('warehouse.db')
     c = conn.cursor()
     app = QtWidgets.QApplication(sys.argv)
-    ui = Ui_OperationDialog("Списать", c, "Иван Иванов")  # тест
+    ui = Ui_OperationDialog("Продать", c, "Иван Иванов")  # тест
     ui.show()
     sys.exit(app.exec_())

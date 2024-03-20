@@ -36,15 +36,16 @@ class UiStandardDataWindow(QtWidgets.QDialog):
         self.cancel_button.setGeometry(QtCore.QRect(970, 590, 101, 41))
         self.cancel_button.setObjectName("cancel_button")
 
+        self.disable_buttons()
         self.support_instance = SupportClass(self.table_name, self.connection, self.table_widget)
         self.support_instance.display_table_data()
         self.search_edit.textChanged.connect(lambda text: self.support_instance.search_table(text))
         self.table_widget.horizontalHeader().sectionClicked.connect(
             lambda clicked_column: self.support_instance.sort_data_by_column(clicked_column))
-        self.add_btn.clicked.connect(self.support_instance.add)
-        self.delete_btn.clicked.connect(self.support_instance.delete)
-        self.save_button.clicked.connect(self.support_instance.save)
-        self.cancel_button.clicked.connect(self.support_instance.cancel)
+        self.add_btn.clicked.connect(lambda: self.button_action("add"))
+        self.delete_btn.clicked.connect(lambda: self.button_action("delete"))
+        self.save_button.clicked.connect(lambda: self.button_action("save"))
+        self.cancel_button.clicked.connect(lambda: self.button_action("cancel"))
 
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)
@@ -56,6 +57,29 @@ class UiStandardDataWindow(QtWidgets.QDialog):
         self.delete_btn.setText(_translate("Dialog", "Удалить"))
         self.save_button.setText(_translate("Dialog", "Сохранить"))
         self.cancel_button.setText(_translate("Dialog", "Отмена"))
+
+    # TODO: Нужно перенести в support_file.py
+    def button_action(self, action_type):
+        if action_type == "delete":
+            self.support_instance.delete()
+            self.enable_buttons()
+        elif action_type == "save":
+            self.support_instance.save()
+            self.disable_buttons()
+        elif action_type == "cancel":
+            self.support_instance.cancel()
+            self.disable_buttons()
+        elif action_type == "add":
+            self.support_instance.add()
+            self.enable_buttons()
+
+    def disable_buttons(self):
+        self.cancel_button.setEnabled(False)
+        self.save_button.setEnabled(False)
+
+    def enable_buttons(self):
+        self.cancel_button.setEnabled(True)
+        self.save_button.setEnabled(True)
 
 
 if __name__ == "__main__":

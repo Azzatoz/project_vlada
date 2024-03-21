@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtWidgets
 from support_file import SupportClass
+from Vlada.ChoosePositionWindow import UiChoosePositionWindow
 
 
 class UiStandardDataWindow(QtWidgets.QDialog):
@@ -8,6 +9,8 @@ class UiStandardDataWindow(QtWidgets.QDialog):
 
         self.table_name = table_name
         self.connection = connection
+        self.headers = None
+        self.new_position = None
 
         self.setObjectName("Dialog")
         self.resize(1200, 800)
@@ -38,7 +41,8 @@ class UiStandardDataWindow(QtWidgets.QDialog):
 
         self.disable_buttons()
         self.support_instance = SupportClass(self.table_name, self.connection, self.table_widget)
-        self.support_instance.display_table_data()
+        initial_db_data, change_db_data, count_columns, self.headers = (
+            self.support_instance.display_table_data())
         self.search_edit.textChanged.connect(lambda text: self.support_instance.search_table(text))
         self.table_widget.horizontalHeader().sectionClicked.connect(
             lambda clicked_column: self.support_instance.sort_data_by_column(clicked_column))
@@ -46,6 +50,7 @@ class UiStandardDataWindow(QtWidgets.QDialog):
         self.delete_btn.clicked.connect(lambda: self.button_action("delete"))
         self.save_button.clicked.connect(lambda: self.button_action("save"))
         self.cancel_button.clicked.connect(lambda: self.button_action("cancel"))
+        self.table_widget.cellDoubleClicked.connect(self.cell_double_clicked)
 
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)
@@ -58,13 +63,28 @@ class UiStandardDataWindow(QtWidgets.QDialog):
         self.save_button.setText(_translate("Dialog", "Сохранить"))
         self.cancel_button.setText(_translate("Dialog", "Отмена"))
 
+    def cell_double_clicked(self, row, column):
+        if self.headers[column] == 'position_id':
+            self.new_position = self.open_choose_position_window()
+            if isinstance(self.new_position, list):
+                if self.new_position is not None:
+                    item = self.table_widget.item(row, column)
+                    item.setText(str(self.new_position[0]))
+                    self.enable_buttons()
+
+    def open_choose_position_window(self):
+        choose_position_window = UiChoosePositionWindow(self.connection)
+        new_position = choose_position_window.exec_()
+        UiStandardDataWindow.operation_window_instance = choose_position_window
+        return new_position
+
     # TODO: Нужно перенести в support_file.py
     def button_action(self, action_type):
         if action_type == "delete":
             self.support_instance.delete()
             self.enable_buttons()
         elif action_type == "save":
-            self.support_instance.save()
+            self.support_instance.save(self.new_position)
             self.disable_buttons()
         elif action_type == "cancel":
             self.support_instance.cancel()

@@ -50,7 +50,7 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.disable_buttons()
         self.print_row_data()
         self.support_instance = SupportClass(self.table_name, self.cursor, self.table_widget)
-        self.initial_result_data, result_data, count_columns = (
+        self.initial_result_data, result_data, count_columns, headers = (
             self.support_instance.display_table_data(self.row_data[0]))
         self.search_edit.textChanged.connect(lambda text: self.support_instance.search_table(text))
         self.table_widget.horizontalHeader().sectionClicked.connect(

@@ -20,6 +20,7 @@ class SupportClass:
         self.result_data = []
         self.initial_result_data = []
         self.count_columns = None
+        self.headers = None
 
     def display_table_data(self, row_id=None, existing_data=None):
         if existing_data:
@@ -29,9 +30,9 @@ class SupportClass:
             if self.connection and self.table_name:
                 query_headers = f"PRAGMA table_info({self.table_name})"
                 result_headers = self.connection.execute(query_headers).fetchall()
-                headers = [column[1] for column in result_headers if column[1] != 'operation_id']
-                self.count_columns = len(headers)
-                columns = ', '.join(headers)
+                self.headers = [column[1] for column in result_headers if column[1] != 'operation_id']
+                self.count_columns = len(self.headers)
+                columns = ', '.join(self.headers)
                 query_data = f"SELECT {columns} FROM {self.table_name}"
                 if self.table_name == 'Operation_product':
                     query_data += f" WHERE operation_id = {row_id}"
@@ -40,13 +41,19 @@ class SupportClass:
                 self.row_id = row_id
 
                 self.table_widget.setColumnCount(self.count_columns)
-                self.table_widget.setHorizontalHeaderLabels(headers)
+                self.table_widget.setHorizontalHeaderLabels(self.headers)
 
                 if self.table_name == 'Operation':
-                    query_data = f"SELECT name FROM Client UNION ALL SELECT name FROM Worker"
-                    names = [name[0] for name in self.connection.execute(query_data).fetchall()]
-                    client_names = names[:len(self.result_data)]
-                    worker_names = names[len(self.result_data):]
+                    client_names = [
+                        self.connection.execute(
+                            f"SELECT name FROM Client WHERE id = {row[2]}"
+                        ).fetchone()[0] for row in self.result_data
+                    ]
+                    worker_names = [
+                        self.connection.execute(
+                            f"SELECT name FROM Worker WHERE id = {row[3]}"
+                        ).fetchone()[0] for row in self.result_data
+                    ]
 
                     for row_index, row_data in enumerate(self.result_data):
                         client_name = client_names[row_index] if row_index < len(client_names) else ""
@@ -68,11 +75,25 @@ class SupportClass:
                         ).fetchone()[0] for row in self.result_data
                     ]
 
-                    for i, row_data in enumerate(self.result_data):
-                        client_name = product_property_names[i] if i < len(product_property_names) else ""
-                        worker_name = warehouse_names[i] if i < len(warehouse_names) else ""
-                        new_row_data = row_data[:1] + (client_name, worker_name) + row_data[3:]
-                        self.result_data[i] = new_row_data
+                    for row_index, row_data in enumerate(self.result_data):
+                        product_property_name = product_property_names[row_index] \
+                            if row_index < len(product_property_names) else ""
+                        warehouse_name = warehouse_names[row_index] if row_index < len(warehouse_names) else ""
+                        new_row_data = row_data[:1] + (product_property_name, warehouse_name) + row_data[3:]
+                        self.result_data[row_index] = new_row_data
+
+                elif self.table_name == 'Worker':
+                    position_names = [
+                        self.connection.execute(
+                            f"SELECT name_position FROM Position "
+                            f"WHERE id = {row[4]}"
+                        ).fetchone()[0] for row in self.result_data
+                    ]
+
+                    for row_index, row_data in enumerate(self.result_data):
+                        name_position = position_names[row_index] if row_index < len(position_names) else ""
+                        new_row_data = row_data[:4] + (name_position, ) + row_data[5:]
+                        self.result_data[row_index] = new_row_data
 
         self.table_widget.setRowCount(len(self.result_data))
 
@@ -85,7 +106,7 @@ class SupportClass:
                 self.original_data[row_index, col_index] = str(col_data)
                 if col_index == 0:
                     item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
-        return self.initial_result_data, self.result_data, self.count_columns
+        return self.initial_result_data, self.result_data, self.count_columns, self.headers
 
     def get_visible_data(self):
         """
@@ -215,6 +236,7 @@ class SupportClass:
         Удаляет выбранные строки / стирает данные в ячейках
         """
         selected_rows = self.table_widget.selectionModel().selectedRows()
+        deleted_row_ids = []
 
         if selected_rows:
             # Если выделены строки, то удаляем их
@@ -230,6 +252,7 @@ class SupportClass:
                 if deleted_row_id is not None:
                     delete_query = f"DELETE FROM {self.table_name} WHERE id = ?;"
                     self.connection.execute(delete_query, (deleted_row_id,))
+                    deleted_row_ids.append(deleted_row_id)
 
         else:
             # Если нет выделенных строк, то очищаем данные в выделенной ячейке (за исключением ячейки с id)
@@ -245,35 +268,44 @@ class SupportClass:
 
         self.changes_made = True
         show_notification("Удалены записи")
+        return deleted_row_ids
 
-    def save(self):
+    def save(self, new_position=None):
         """
         Сохраняет все внесённые изменения
         """
-        if self.changes_made:
-            # Получаем старые данные из базы данных
-            query_data = f"SELECT * FROM {self.table_name}"
-            result_data = self.connection.execute(query_data).fetchall()
+        # Получаем старые данные из базы данных
+        query_data = f"SELECT * FROM {self.table_name}"
+        result_data = self.connection.execute(query_data).fetchall()
 
-            self.result_data.clear()
+        result_data.clear()
 
-            for row in range(self.table_widget.rowCount()):
-                new_data = [
-                    self.table_widget.item(row, col).text() if self.table_widget.item(row, col) is not None else '' for
-                    col in range(self.table_widget.columnCount())]
-                self.result_data.append(new_data)
+        for row in range(self.table_widget.rowCount()):
+            new_data = [
+                self.table_widget.item(row, col).text() if self.table_widget.item(row, col) is not None else '' for
+                col in range(self.table_widget.columnCount())]
+            result_data.append(new_data)
 
-                if row >= len(result_data):
-                    # Новая запись, вставляем её в базу данных
-                    self.insert_record(new_data)
-                else:
-                    old_data = result_data[row]
+            if row >= len(result_data):
+                # Новая запись, вставляем её в базу данных
+                self.insert_record(new_data)
+            else:
+                old_data = self.result_data[row]
+                initial_old_data = self.initial_result_data[row]
 
-                    if self.table_name != 'Operation':
+                if self.table_name not in ['Operation', 'Operation_product', 'Worker']:
 
-                        if new_data != old_data:
-                            # Обновляем существующую запись в базе данных
-                            self.update_record(new_data, old_data)
+                    if new_data != old_data:
+                        # Обновляем существующую запись в базе данных
+                        self.update_record(new_data, old_data)
+
+                elif self.table_name == 'Worker':
+                    if new_data[4] != old_data[4]:
+                        new_data[4] = new_position[1]
+                    else:
+                        new_data[4] = initial_old_data[4]
+
+                    self.update_record(new_data, old_data)
 
             # Фиксируем изменения в базе данных
             self.connection.commit()

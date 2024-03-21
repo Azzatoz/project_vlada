@@ -9,6 +9,7 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.cursor = cursor
         self.row_data = row_data
         self.table_name = 'Operation_product'
+        self.initial_result_data = []
 
         self.setObjectName("Dialog")
         self.resize(1200, 800)
@@ -36,9 +37,9 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.delete_btn = QtWidgets.QPushButton(self)
         self.delete_btn.setGeometry(QtCore.QRect(1020, 320, 93, 28))
         self.delete_btn.setObjectName("delete_btn")
-        self.add_btn = QtWidgets.QPushButton(self)
-        self.add_btn.setGeometry(QtCore.QRect(910, 320, 93, 28))
-        self.add_btn.setObjectName("add_btn")
+        self.return_btn = QtWidgets.QPushButton(self)
+        self.return_btn.setGeometry(QtCore.QRect(910, 320, 93, 28))
+        self.return_btn.setObjectName("return_btn")
         self.cancel_button = QtWidgets.QPushButton(self)
         self.cancel_button.setGeometry(QtCore.QRect(1020, 740, 93, 28))
         self.cancel_button.setObjectName("cancel_button")
@@ -46,16 +47,18 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.save_button.setGeometry(QtCore.QRect(910, 740, 93, 28))
         self.save_button.setObjectName("save_button")
 
-        self.enable_buttons()
+        self.disable_buttons()
         self.print_row_data()
         self.support_instance = SupportClass(self.table_name, self.cursor, self.table_widget)
-        self.support_instance.display_table_data(self.row_data[0])
+        self.initial_result_data, result_data, count_columns, headers = (
+            self.support_instance.display_table_data(self.row_data[0]))
         self.search_edit.textChanged.connect(lambda text: self.support_instance.search_table(text))
         self.table_widget.horizontalHeader().sectionClicked.connect(
             lambda clicked_column: self.support_instance.sort_data_by_column(clicked_column))
         self.delete_btn.clicked.connect(lambda: self.button_action("delete"))
         self.save_button.clicked.connect(lambda: self.button_action("save"))
         self.cancel_button.clicked.connect(lambda: self.button_action("cancel"))
+        self.return_btn.clicked.connect(self.return_product)
 
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)
@@ -66,9 +69,45 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.open_word_btn.setText(_translate("Dialog", "Открыть word-документ"))
         self.open_excel_btn.setText(_translate("Dialog", "Открыть excel-документ"))
         self.delete_btn.setText(_translate("Dialog", "Удалить"))
-        self.add_btn.setText(_translate("Dialog", "Вернуть"))
+        self.return_btn.setText(_translate("Dialog", "Вернуть"))
         self.cancel_button.setText(_translate("Dialog", "Отмена"))
         self.save_button.setText(_translate("Dialog", "Сохранить"))
+
+    def return_product(self):
+        tab_name = 'Current_product'
+        if self.row_data[1] in ['Продажа товара', 'Списание товара']:
+            added_row_ids = self.support_instance.delete()
+
+            for added_row_id in added_row_ids:
+                for item_data in self.initial_result_data:
+                    if item_data[0] == int(added_row_id):
+                        product_id = item_data[1]
+                        quantity = item_data[3]
+
+                        update_query = f"UPDATE Current_product SET quantity = quantity + ? WHERE id = ?"
+                        self.cursor.execute(update_query, (quantity, product_id))
+
+        elif self.row_data[1] == 'Принятие товара':
+            deleted_row_ids = self.support_instance.delete()
+
+            for deleted_row_id in deleted_row_ids:
+                for item_data in self.initial_result_data:
+                    if item_data[0] == int(deleted_row_id):
+                        product_id = item_data[1]
+                        delete_query = f"DELETE FROM {tab_name} WHERE id = ?"
+                        self.cursor.execute(delete_query, (product_id, ))
+
+        elif self.row_data[1] == 'Перемещение товара на другой склад':
+            updated_row_ids = self.support_instance.delete()
+
+            for updated_row_id in updated_row_ids:
+                for item_data in self.initial_result_data:
+                    if item_data[0] == int(updated_row_id):
+                        new_warehouse_id = item_data[2]
+                        update_query = f"UPDATE {tab_name} SET warehouse_id = ? WHERE id = ?"
+                        self.cursor.execute(update_query, (new_warehouse_id, updated_row_id))
+
+        self.enable_buttons()
 
     def print_row_data(self):
         client = self.row_data[2] if self.row_data[2] is not None else ''
@@ -83,18 +122,21 @@ class UiOperationTableWindow(QtWidgets.QDialog):
     def button_action(self, action_type):
         if action_type == "delete":
             self.support_instance.delete()
-            self.cancel_button.setEnabled(True)
-            self.save_button.setEnabled(True)
+            self.enable_buttons()
         elif action_type == "save":
             self.support_instance.save()
-            self.enable_buttons()
+            self.disable_buttons()
         elif action_type == "cancel":
             self.support_instance.cancel()
-            self.enable_buttons()
+            self.disable_buttons()
 
-    def enable_buttons(self):
+    def disable_buttons(self):
         self.cancel_button.setEnabled(False)
         self.save_button.setEnabled(False)
+
+    def enable_buttons(self):
+        self.cancel_button.setEnabled(True)
+        self.save_button.setEnabled(True)
 
 
 if __name__ == "__main__":

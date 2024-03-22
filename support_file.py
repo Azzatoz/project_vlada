@@ -21,6 +21,16 @@ class SupportClass:
         self.initial_result_data = []
         self.count_columns = None
         self.headers = None
+        self.column_names = {
+            'Operation': ["Идентификатор", "Тип операции", "Имя клиента", "Имя сотрудника", "Время",
+                          "Другие характеристики"],
+            'Operation_product': ["Идентификатор", "Товар", "Склад", "Количество", "Состояние"],
+            'Worker': ["Идентификатор", "Имя сотрудника", "День рождения", "Номер телефона",
+                       "Должность", "Логин", "Пароль"],
+            'Client': ["Идентификатор", "Имя клиента", "Номер телефона", "Другие данные"],
+            'Position': ["Идентификатор", "Название должности", "Зарплата", "Уровень доступа"],
+            'Warehouse': ["Идентификатор", "Номер склада", "Адрес", "Координаты", "Геолокация", "Имеющиеся товары"]
+        }
 
     def display_table_data(self, row_id=None, existing_data=None):
         if existing_data:
@@ -40,8 +50,10 @@ class SupportClass:
                 self.initial_result_data = self.result_data[:]
                 self.row_id = row_id
 
+                current_column_names = self.column_names.get(self.table_name, [])
+
                 self.table_widget.setColumnCount(self.count_columns)
-                self.table_widget.setHorizontalHeaderLabels(self.headers)
+                self.table_widget.setHorizontalHeaderLabels(current_column_names)
 
                 if self.table_name == 'Operation':
                     client_names = [
@@ -198,6 +210,11 @@ class SupportClass:
         item_id.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)  # Заблокировать редактирование
         self.table_widget.setItem(current_row_count, 0, item_id)
 
+        # Заполнение новой строки пустыми значениями
+        for column in range(1, self.table_widget.columnCount()):
+            item = QtWidgets.QTableWidgetItem('')
+            self.table_widget.setItem(current_row_count, column, item)
+
     def cancel(self):
         """
         Отменяет все изменения
@@ -277,8 +294,10 @@ class SupportClass:
                 col in range(self.table_widget.columnCount())]
             result_data.append(new_data)
 
-            if row >= len(result_data):
+            if row >= len(self.result_data):
                 # Новая запись, вставляем её в базу данных
+                if self.table_name == 'Worker':
+                    new_data[4] = new_position[1]
                 self.insert_record(new_data)
             else:
                 old_data = self.result_data[row]
@@ -310,18 +329,20 @@ class SupportClass:
         insert_query = f"INSERT INTO {self.table_name} VALUES ({', '.join(['?' for _ in range(len(new_data))])});"
         with self.connection:
             self.connection.execute(insert_query, new_data)
+        self.connection.commit()
 
     def update_record(self, new_data, old_data):
         """
         Обновляет существующую запись в базе данных
         """
         update_query = f"UPDATE {self.table_name} SET "
-        update_query += ', '.join([f"{self.table_widget.horizontalHeaderItem(col).text()} = ?" for col in
+        update_query += ', '.join([f"{self.headers[col]} = ?" for col in
                                    range(1, len(new_data))])  # Не включаем id в обновление
         update_query += f" WHERE id = ?;"
 
         with self.connection:
             self.connection.execute(update_query, (*new_data[1:], old_data[0]))
+        self.connection.commit()
 
     def write_off(self):
         selected_row = self.table_widget.currentRow()

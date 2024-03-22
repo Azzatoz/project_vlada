@@ -1,4 +1,5 @@
 from PyQt5 import QtCore, QtWidgets
+import re
 
 
 def show_notification(message):
@@ -21,6 +22,7 @@ class SupportClass:
         self.initial_result_data = []
         self.count_columns = None
         self.headers = None
+        self.current_column_names = None
         self.column_names = {
             'Operation': ["Идентификатор", "Тип операции", "Имя клиента", "Имя сотрудника", "Время",
                           "Другие характеристики"],
@@ -50,10 +52,10 @@ class SupportClass:
                 self.initial_result_data = self.result_data[:]
                 self.row_id = row_id
 
-                current_column_names = self.column_names.get(self.table_name, [])
+                self.current_column_names = self.column_names.get(self.table_name, [])
 
                 self.table_widget.setColumnCount(self.count_columns)
-                self.table_widget.setHorizontalHeaderLabels(current_column_names)
+                self.table_widget.setHorizontalHeaderLabels(self.current_column_names)
 
                 if self.table_name == 'Operation':
                     client_names = [
@@ -278,6 +280,26 @@ class SupportClass:
                 show_notification("Удалены записи")
         return deleted_row_ids
 
+    @staticmethod
+    def validate_item(item_text, name_col, initial_name_col):
+        if initial_name_col == 'birthday':
+            if not re.match(r'^\d{4}-\d{2}-\d{2}$', item_text):
+                show_notification(f"Неправильный формат даты(YYYY-MM-DD) в столбце {name_col}.")
+                return False
+        elif initial_name_col == 'phone_number':
+            if not re.match(r'^\d{1,15}$', item_text):
+                show_notification(f"Неправильный формат номера телефона (максимум 15 чисел) в столбце {name_col}.")
+                return False
+        elif initial_name_col == 'username':
+            if not re.match(r'^[a-zA-Z0-9_]{5,}$', item_text):
+                show_notification(f"Неправильный формат логина в столбце {name_col}.")
+                return False
+        elif initial_name_col == 'password':
+            if not re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', item_text):
+                show_notification(f"Неправильный формат пароля в столбце {name_col}.")
+                return False
+        return True
+
     def save(self, new_position=None):
         """
         Сохраняет все внесённые изменения
@@ -292,6 +314,14 @@ class SupportClass:
             new_data = [
                 self.table_widget.item(row, col).text() if self.table_widget.item(row, col) is not None else '' for
                 col in range(self.table_widget.columnCount())]
+
+            # Проверяем каждый элемент данных перед сохранением
+            for col, item_text in enumerate(new_data[1:], start=1):
+                name_col = self.current_column_names[col]
+                initial_name_col = self.headers[col]
+                if not self.validate_item(item_text, name_col, initial_name_col):
+                    return
+
             result_data.append(new_data)
 
             if row >= len(self.result_data):
@@ -318,7 +348,7 @@ class SupportClass:
                     self.update_record(new_data, old_data)
 
             # Фиксируем изменения в базе данных
-            self.connection.commit()
+        self.connection.commit()
 
         show_notification("Изменения успешно сохранены в базе данных")
 

@@ -189,33 +189,26 @@ class UiMainWindow(QtWidgets.QMainWindow):
             current_row_ids.append(int(item.text()))
 
         deleted_row_ids = set(db_row_ids) - set(current_row_ids)
-        try:
-            for deleted_row_id in deleted_row_ids:
-                deleted_rows_data = next(deleted_row_data for deleted_row_data in self.initial_db_data
-                                         if deleted_row_data[0] == deleted_row_id)
-                self.cursor.execute(f"INSERT INTO {self.table_name} VALUES "
-                                    f"({','.join(['?'] * self.count_columns)})", deleted_rows_data)
+        for deleted_row_id in deleted_row_ids:
+            deleted_rows_data = next(deleted_row_data for deleted_row_data in self.initial_db_data
+                                     if deleted_row_data[0] == deleted_row_id)
+            self.cursor.execute(f"INSERT INTO {self.table_name} VALUES "
+                                f"({','.join(['?'] * self.count_columns)})", deleted_rows_data)
 
-            self.connection.commit()
-            self.support_instance.display_table_data()
-            show_notification("Отменены все изменения")
-            self.output_edit.setPlainText("Изменения в базе данных отменены.")
-            self.cancel_button.setEnabled(False)
-        except sqlite3.Error:
-            show_notification("Не удалось отменить изменения")
-            self.textEdit.setPlainText("Не удалось отменить изменения в базе данных.")
+        self.connection.commit()
+        self.support_instance.display_table_data()
+        show_notification("Отменены все изменения")
+        self.output_edit.setPlainText("Изменения в базе данных отменены.")
+        self.cancel_button.setEnabled(False)
 
     def delete_and_enable_cancel_button(self):
-        try:
-            deleted_ids = self.support_instance.delete()
-            if deleted_ids:
-                self.support_instance.save()
-                self.cancel_button.setEnabled(True)
-                self.output_edit.setText(f"Запись(и) успешно удалены из базы данных.")
-            else:
-                self.output_edit.setText(f"Выберите запись(и) для удаления.")
-        except sqlite3.Error:
-            self.output_edit.setText("Не удалось удалить запись(и) из базы данных.")
+        deleted_ids = self.support_instance.delete()
+        if deleted_ids:
+            self.support_instance.save()
+            self.cancel_button.setEnabled(True)
+            self.output_edit.setText(f"Запись(и) успешно удалены из базы данных.")
+        else:
+            self.output_edit.setText(f"Выберите запись(и) для удаления.")
 
 
 if __name__ == "__main__":

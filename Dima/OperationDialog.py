@@ -116,10 +116,8 @@ class Ui_OperationDialog(object):
         QtCore.QMetaObject.connectSlotsByName(self.operationDialog)
 
         self.support_instance = SupportClass(self.table_name, self.connection, self.table_widget)
-        self.controller = OperationDialogController(self, self.support_instance, self.table_widget, self.info_line, operation, connection, self.name)
-
-
-        # Отображение диалогового окна
+        self.controller = OperationDialogController(self, self.support_instance, self.table_widget, self.info_line,
+                                                    operation, connection, self.name)
         self.show()
         # отображаем таблицу с данными
         self.display_current_product_data(self.cursor, self.operation_type)
@@ -142,14 +140,14 @@ class Ui_OperationDialog(object):
 
     def display_current_product_data(self, cursor, operation_type, selected_row=None, selected_items=None):
 
-        # 1. Получаем данные из таблицы Current_product и Product_property
+        # данные из таблицы Current_product и Product_property
         query_data = f"SELECT cp.id, cp.quantity, cp.delivery_id, cp.warehouse_id, cp.delivery_date, pp.current_product_name " \
                      f"FROM {self.table_name} AS cp " \
                      f"JOIN Product_property AS pp ON cp.id = pp.current_product_id"
         cursor.execute(query_data)
         result_data = cursor.fetchall()
 
-        # 2. Получаем имена операторов и складов
+        # имена операций и складов
         operator_names = [
             cursor.execute(
                 f"SELECT type FROM Operation WHERE id = {row[2]}"
@@ -161,10 +159,10 @@ class Ui_OperationDialog(object):
             ).fetchone()[0] for row in result_data
         ]
 
-        # 3. Создаем новый столбец с заголовком в зависимости от типа операции
+        # новый столбец с заголовком в зависимости от типа операции
         destination_column_name = "Кому продать" if operation_type == "Продать" else "Переместить в"
 
-        # 4. Обновляем заголовки таблицы, добавляя новый столбец
+        # Устанавливаем заголовки таблицы, добавляя новый столбец
         headers = ['ID', 'Наименование', 'Количество', 'Поставки', 'Склад', 'Дата поставки',
                    destination_column_name]
         num_cols = len(headers)
@@ -177,7 +175,7 @@ class Ui_OperationDialog(object):
         self.table_widget.setColumnCount(num_cols)
         self.table_widget.setHorizontalHeaderLabels(headers)
 
-        # 5. Заполняем таблицу данными
+        # Заполняем таблицу данными
         for row_index, row_data in enumerate(result_data):
             # Получаем данные строки
             product_id, quantity, delivery_id, warehouse_id, delivery_date, product_name = row_data

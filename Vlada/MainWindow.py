@@ -3,6 +3,7 @@ from Dima.OperationWindow import Ui_OperationWindow
 from Vlada.OperationTableWindow import UiOperationTableWindow
 from Vlada.StandardDataWindow import UiStandardDataWindow
 from support_file import SupportClass
+from support_file import show_notification
 from PyQt5 import QtCore, QtWidgets
 import sqlite3
 
@@ -197,17 +198,22 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
             self.connection.commit()
             self.support_instance.display_table_data()
-            self.output_edit.setPlainText(f"Изменения в базе данных отменены.")
+            show_notification("Отменены все изменения")
+            self.output_edit.setPlainText("Изменения в базе данных отменены.")
             self.cancel_button.setEnabled(False)
         except sqlite3.Error:
+            show_notification("Не удалось отменить изменения")
             self.textEdit.setPlainText("Не удалось отменить изменения в базе данных.")
 
     def delete_and_enable_cancel_button(self):
         try:
-            self.support_instance.delete()
-            self.support_instance.save()
-            self.cancel_button.setEnabled(True)
-            self.output_edit.setText(f"Запись(и) успешно удалены из базы данных.")
+            deleted_ids = self.support_instance.delete()
+            if deleted_ids:
+                self.support_instance.save()
+                self.cancel_button.setEnabled(True)
+                self.output_edit.setText(f"Запись(и) успешно удалены из базы данных.")
+            else:
+                self.output_edit.setText(f"Выберите запись(и) для удаления.")
         except sqlite3.Error:
             self.output_edit.setText("Не удалось удалить запись(и) из базы данных.")
 

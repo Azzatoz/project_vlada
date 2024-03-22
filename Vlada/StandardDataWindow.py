@@ -29,9 +29,11 @@ class UiStandardDataWindow(QtWidgets.QDialog):
         self.delete_btn = QtWidgets.QPushButton(self)
         self.delete_btn.setGeometry(QtCore.QRect(970, 70, 101, 41))
         self.delete_btn.setObjectName("delete_btn")
+        self.delete_btn.setFocus()
         self.output_edit = QtWidgets.QTextEdit(self)
         self.output_edit.setGeometry(QtCore.QRect(130, 590, 551, 141))
         self.output_edit.setObjectName("output_edit")
+        self.output_edit.setReadOnly(True)
         self.save_button = QtWidgets.QPushButton(self)
         self.save_button.setGeometry(QtCore.QRect(850, 590, 101, 41))
         self.save_button.setObjectName("save_button")
@@ -51,6 +53,7 @@ class UiStandardDataWindow(QtWidgets.QDialog):
         self.save_button.clicked.connect(lambda: self.button_action("save"))
         self.cancel_button.clicked.connect(lambda: self.button_action("cancel"))
         self.table_widget.cellDoubleClicked.connect(self.cell_double_clicked)
+        self.table_widget.cellChanged.connect(self.enable_buttons)
 
         self.re_translate_ui()
         QtCore.QMetaObject.connectSlotsByName(self)
@@ -67,7 +70,7 @@ class UiStandardDataWindow(QtWidgets.QDialog):
         if self.headers[column] == 'position_id':
             self.new_position = self.open_choose_position_window()
             if isinstance(self.new_position, list):
-                if self.new_position is not None:
+                if self.new_position:
                     item = self.table_widget.item(row, column)
                     item.setText(str(self.new_position[0]))
                     self.enable_buttons()
@@ -81,17 +84,24 @@ class UiStandardDataWindow(QtWidgets.QDialog):
     # TODO: Нужно перенести в support_file.py
     def button_action(self, action_type):
         if action_type == "delete":
-            self.support_instance.delete()
-            self.enable_buttons()
+            deleted_ids = self.support_instance.delete()
+            if deleted_ids:
+                self.enable_buttons()
+                self.output_edit.setText(f"Запись(и) успешно удалены.")
+            else:
+                self.output_edit.setText(f"Выберите запись(и) для удаления.")
         elif action_type == "save":
             self.support_instance.save(self.new_position)
             self.disable_buttons()
+            self.output_edit.setText(f"Изменения успешно сохранены в базе данных.")
         elif action_type == "cancel":
             self.support_instance.cancel()
             self.disable_buttons()
+            self.output_edit.setText(f"Изменения успешно отменены.")
         elif action_type == "add":
             self.support_instance.add()
             self.enable_buttons()
+            self.output_edit.setText(f"Новая запись успешно добавлена.")
 
     def disable_buttons(self):
         self.cancel_button.setEnabled(False)

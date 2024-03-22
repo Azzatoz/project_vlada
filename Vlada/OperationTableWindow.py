@@ -10,6 +10,7 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.row_data = row_data
         self.table_name = 'Operation_product'
         self.initial_result_data = []
+        self.deleted_row_ids = None
 
         self.setObjectName("Dialog")
         self.resize(1200, 800)
@@ -76,9 +77,9 @@ class UiOperationTableWindow(QtWidgets.QDialog):
     def return_product(self):
         tab_name = 'Current_product'
         if self.row_data[1] in ['Продажа товара', 'Списание товара']:
-            added_row_ids = self.support_instance.delete()
+            self.deleted_row_ids = self.support_instance.delete()
 
-            for added_row_id in added_row_ids:
+            for added_row_id in self.deleted_row_ids:
                 for item_data in self.initial_result_data:
                     if item_data[0] == int(added_row_id):
                         product_id = item_data[1]
@@ -88,9 +89,9 @@ class UiOperationTableWindow(QtWidgets.QDialog):
                         self.cursor.execute(update_query, (quantity, product_id))
 
         elif self.row_data[1] == 'Принятие товара':
-            deleted_row_ids = self.support_instance.delete()
+            self.deleted_row_ids = self.support_instance.delete()
 
-            for deleted_row_id in deleted_row_ids:
+            for deleted_row_id in self.deleted_row_ids:
                 for item_data in self.initial_result_data:
                     if item_data[0] == int(deleted_row_id):
                         product_id = item_data[1]
@@ -98,16 +99,17 @@ class UiOperationTableWindow(QtWidgets.QDialog):
                         self.cursor.execute(delete_query, (product_id, ))
 
         elif self.row_data[1] == 'Перемещение товара на другой склад':
-            updated_row_ids = self.support_instance.delete()
+            self.deleted_row_ids = self.support_instance.delete()
 
-            for updated_row_id in updated_row_ids:
+            for updated_row_id in self.deleted_row_ids:
                 for item_data in self.initial_result_data:
                     if item_data[0] == int(updated_row_id):
                         new_warehouse_id = item_data[2]
                         update_query = f"UPDATE {tab_name} SET warehouse_id = ? WHERE id = ?"
                         self.cursor.execute(update_query, (new_warehouse_id, updated_row_id))
 
-        self.enable_buttons()
+        if self.deleted_row_ids:
+            self.enable_buttons()
 
     def print_row_data(self):
         client = self.row_data[2] if self.row_data[2] is not None else ''
@@ -121,8 +123,9 @@ class UiOperationTableWindow(QtWidgets.QDialog):
 
     def button_action(self, action_type):
         if action_type == "delete":
-            self.support_instance.delete()
-            self.enable_buttons()
+            deleted_ids = self.support_instance.delete()
+            if deleted_ids:
+                self.enable_buttons()
         elif action_type == "save":
             self.support_instance.save()
             self.disable_buttons()

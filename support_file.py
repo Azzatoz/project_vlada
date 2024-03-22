@@ -198,13 +198,6 @@ class SupportClass:
         item_id.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)  # Заблокировать редактирование
         self.table_widget.setItem(current_row_count, 0, item_id)
 
-        # Разблокируем кнопку сохранения новой таблицы
-        # self.table_widget.parent().save_button.setEnabled(True)
-        # self.table_widget.parent().cancel_button.setEnabled(True)
-
-        self.changes_made = True
-        show_notification("Добавлена новая запись")
-
     def cancel(self):
         """
         Отменяет все изменения
@@ -257,17 +250,15 @@ class SupportClass:
         else:
             # Если нет выделенных строк, то очищаем данные в выделенной ячейке (за исключением ячейки с id)
             selected_items = self.table_widget.selectedItems()
+            if not selected_rows and not selected_items:
+                # Если ни одна запись не выбрана и нет выделенных ячеек, выводим сообщение
+                show_notification("Вы не выбрали ни одной записи")
             for item in selected_items:
                 if item.column() != 0:  # Проверяем, что это не ячейка с id
                     # (предполагаем, что id находится в первой колонке)
                     item.setText("")
-
-        # Разблокируем кнопку сохранения новой таблицы
-        # self.table_widget.parent().save_button.setEnabled(True)
-        # self.table_widget.parent().cancel_button.setEnabled(True)
-
-        self.changes_made = True
-        show_notification("Удалены записи")
+            if selected_rows or selected_items:
+                show_notification("Удалены записи")
         return deleted_row_ids
 
     def save(self, new_position=None):
@@ -310,11 +301,7 @@ class SupportClass:
             # Фиксируем изменения в базе данных
             self.connection.commit()
 
-            # Сбрасываем флаг изменений и блокируем кнопки
-            self.changes_made = False
-            # self.table_widget.parent().save_button.setEnabled(False)
-            # self.table_widget.parent().cancel_button.setEnabled(False)
-            show_notification("Изменения успешно сохранены в базе данных")
+        show_notification("Изменения успешно сохранены в базе данных")
 
     def insert_record(self, new_data):
         """

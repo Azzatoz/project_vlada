@@ -1,16 +1,23 @@
 import sqlite3
 from PyQt5 import QtCore, QtGui, QtWidgets
 from Dima.OperationDialogController import OperationDialogController
-from Dima.ChooseDialog import ChooseDialog
+from Dima.AddDialog import Ui_AddDialog
 from support_file import SupportClass
+from support_file import show_notification
+
+
+# TODO: изменить получение клиента или склада на просто comboBox в OperationDialog (chooseDialog не нужен), Done;
+#  добавить добавление нового клиента, Done;
+#  чтобы сохранение обрабатывало сразу все данные, Done;
+#  добавить обновление в MainWindow (попробовать с помощью commit'a)
 
 
 class Ui_OperationDialog(object):
-    def __init__(self, operation, connection, name):
+    def __init__(self, operation, connection, worker_name):
 
         self.db_data = {}
         self.original_data = {}
-        self.name = name
+        self.worker_name = worker_name
         self.connection = connection
         self.cursor = self.connection.cursor()
         self.operation_type = operation
@@ -38,9 +45,9 @@ class Ui_OperationDialog(object):
         self.find_line.textChanged.connect(lambda text: self.controller.support_instance.search_table(text))
         self.horizontalLayout.addWidget(self.find_line)
 
-        self.choose_button = QtWidgets.QPushButton(self.verticalLayoutWidget)
-        self.choose_button.setObjectName("choose_button")
-        self.horizontalLayout.addWidget(self.choose_button)
+        self.choose_comboBox = QtWidgets.QComboBox(self.verticalLayoutWidget)
+        self.choose_comboBox.setObjectName("choose_button")
+        self.horizontalLayout.addWidget(self.choose_comboBox)
 
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding,
                                            QtWidgets.QSizePolicy.Minimum)
@@ -60,7 +67,7 @@ class Ui_OperationDialog(object):
         self.table_widget.setObjectName("table_widget")
         self.table_widget.setColumnCount(0)
         self.table_widget.setRowCount(0)
-        self.table_widget.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.table_widget.setEditTriggers(QtWidgets.QAbstractItemView.AllEditTriggers)
         self.table_widget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.verticalLayout.addWidget(self.table_widget)
 
@@ -117,10 +124,12 @@ class Ui_OperationDialog(object):
 
         self.support_instance = SupportClass(self.table_name, self.connection, self.table_widget)
         self.controller = OperationDialogController(self, self.support_instance, self.table_widget, self.info_line,
-                                                    operation, connection, self.name)
+                                                    operation, connection, self.worker_name)
         self.show()
         # отображаем таблицу с данными
-        self.display_current_product_data(self.cursor, self.operation_type)
+        self.display_current_product_data(self.cursor)
+        self.table_widget.cellChanged.connect(self.handle_cell_changed)
+
         # определяем функции к кнопкам
         self.connect_buttons_events(self.operation_type)
 
@@ -128,7 +137,6 @@ class Ui_OperationDialog(object):
         _translate = QtCore.QCoreApplication.translate
         operationDialog.setWindowTitle(_translate("operationDialog", "operationDialog"))
         self.find_line.setPlaceholderText(_translate("operationDialog", "Найти..."))
-        self.choose_button.setText(_translate("operationDialog", self.operation_type))
         self.cancel_button.setText(_translate("operationDialog", "Отмена"))
         self.check_excel.setText(_translate("operationDialog", "Создать файл Excel"))
         self.check_word.setText(_translate("operationDialog", "Создать файл Word"))
@@ -138,8 +146,7 @@ class Ui_OperationDialog(object):
     def show(self):
         self.operationDialog.show()
 
-    def display_current_product_data(self, cursor, operation_type, selected_row=None, selected_items=None):
-
+    def display_current_product_data(self, cursor):
         # данные из таблицы Current_product и Product_property
         query_data = f"SELECT cp.id, cp.quantity, cp.delivery_id, cp.warehouse_id, cp.delivery_date, pp.current_product_name " \
                      f"FROM {self.table_name} AS cp " \
@@ -160,11 +167,11 @@ class Ui_OperationDialog(object):
         ]
 
         # новый столбец с заголовком в зависимости от типа операции
-        destination_column_name = "Кому продать" if operation_type == "Продать" else "Переместить в"
+        operation_column_title = "Количество на " + self.operation_type.lower()
 
         # Устанавливаем заголовки таблицы, добавляя новый столбец
-        headers = ['ID', 'Наименование', 'Количество', 'Поставки', 'Склад', 'Дата поставки',
-                   destination_column_name]
+        headers = ['ID', 'Наименование', 'Количество на складе', operation_column_title, 'Поставки', 'Склад',
+                   'Дата поставки']
         num_cols = len(headers)
 
         # Устанавливаем количество строк и столбцов
@@ -192,42 +199,131 @@ class Ui_OperationDialog(object):
             self.table_widget.setItem(row_index, 0, item_id)
             self.table_widget.setItem(row_index, 1, item_name)
             self.table_widget.setItem(row_index, 2, item_quantity)
-            self.table_widget.setItem(row_index, 3, item_operator)
-            self.table_widget.setItem(row_index, 4, item_warehouse)
-            self.table_widget.setItem(row_index, 5, item_delivery_date)
+            self.table_widget.setItem(row_index, 3, QtWidgets.QTableWidgetItem(""))  # Пустая ячейка для нового столбца
+            self.table_widget.setItem(row_index, 4, item_operator)
+            self.table_widget.setItem(row_index, 5, item_warehouse)
+            self.table_widget.setItem(row_index, 6, item_delivery_date)
 
-            # Если передана выбранная строка и данные для вставки
-            if selected_row is not None and selected_items is not None:
-                # Заполняем выбранную строку данными из selected_items
-                for col_index, col_data in enumerate(selected_items):
-                    item = QtWidgets.QTableWidgetItem(str(col_data))
-                    self.table_widget.setItem(selected_row, col_index, item)
+            # Устанавливаем флаги для ячеек редактирования
+            for row_index, row_data in enumerate(result_data):
+                for column_index in range(num_cols):
+                    item = self.table_widget.item(row_index, column_index)
+                    if item and column_index == 3:  # Проверяем, что это столбец с количеством на складе
+                        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+                    else:
+                        if item:
+                            item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)  # Убираем флаг редактирования
+
+    def save_operation_data(self):
+        """
+        Сохраняет данные операции в базу данных и обновляет информацию о товарах.
+        """
+        # Получаем тип операции и текущее время
+        import datetime
+        operation_type = self.operation_type
+        current_time = datetime.datetime.now().strftime("%d-%m-%Y")
+
+        # Получаем идентификатор работника
+        worker_id = self.controller.get_worker_id(self.worker_name)
+
+        # Получаем выбранный элемент из comboBox
+        selected_destination = self.choose_comboBox.currentText()
+
+        # Получаем идентификатор клиента или склада
+        client_or_warehouse_id = self.controller.get_client_or_warehouse_id(selected_destination)
+        print(client_or_warehouse_id)
+
+        # Получаем выбранные товары для операции
+        selected_items = self.controller.get_selected_items()
+        if not selected_items:
+            show_notification("Выберите товары для операции")
+            return
+
+        # Вставляем данные об операции
+        self.controller.insert_operation_data(operation_type, client_or_warehouse_id, worker_id, current_time,
+                                              additional_characteristics=None, selected_items=selected_items)
+
+        # Обновляем информацию о товарах и складе
+        self.controller.update_product_information(selected_items, client_or_warehouse_id)
+
+        # После сохранения операции вызываем метод для отображения данных
+        self.display_current_product_data(self.cursor)
+
+    def populateComboBox(self):
+        cursor = self.cursor
+        self.choose_comboBox.clear()  # Очищаем combobox
+
+        if self.operation_type == "Продать":
+            # Запрос данных о клиентах из базы данных и заполнение comboBox
+            query = "SELECT name FROM Client"
+            cursor.execute(query)
+            clients = cursor.fetchall()
+            for client in clients:
+                self.choose_comboBox.addItem(client[0])
+        elif self.operation_type == "Переместить":
+            # Запрос названий складов из базы данных и заполнение comboBox
+            query = "SELECT name FROM Warehouse"
+            cursor.execute(query)
+            warehouses = cursor.fetchall()
+            for warehouse in warehouses:
+                self.choose_comboBox.addItem(warehouse[0])
+
+        # Добавляем опцию "Добавить" после основных элементов
+        self.choose_comboBox.addItem("Добавить...")
+        self.choose_comboBox.activated.connect(self.handleAddItem)
+        self.choose_comboBox.activated[str].connect(self.controller.get_client_or_warehouse_id)
 
     def connect_buttons_events(self, operation_type):
         from Vlada.MainWindow import UiMainWindow
-        mainWindow_instance = UiMainWindow(self.name)
+        mainWindow_instance = UiMainWindow(self.worker_name)
         # Подключение событий к обработчикам
-        self.save_button.clicked.connect(self.controller.save_operation_data)
+        self.save_button.clicked.connect(self.save_operation_data)
         self.cancel_button.clicked.connect(mainWindow_instance.cancel_deletion_row)
         if operation_type == "Списать":
-            self.choose_button.clicked.connect(self.controller.write_off_product)
+            self.choose_comboBox.clicked.connect(self.controller.write_off_product)
         elif operation_type in ["Продать", "Переместить"]:
-            self.choose_button.clicked.connect(self.choose_button_clicked)
+            self.populateComboBox()
 
-    def choose_button_clicked(self):
+    def handle_cell_changed(self, row, column):
         """
-        Передает данные в ChooseDialog для заполнения колонки клиента или склада
+        Проверяет, есть ли данные в столбце с количеством
+        :param row:
+        :param column:
         :return:
         """
-        selected_items = self.controller.get_selected_items()  # Получаем выбранные элементы из таблицы
-        column_headers = []
-        for col in range(self.table_widget.columnCount()):
-            header = self.table_widget.horizontalHeaderItem(col).text()
-            column_headers.append(header)
-        choose_dialog = ChooseDialog(self.cursor, selected_items, self.operation_type, column_headers)
-        Ui_OperationDialog.operation_dialog_instance = choose_dialog
-        choose_dialog.ChooseDialog.show()
-        choose_dialog.data_selected.connect(lambda data: self.controller.handle_sell_move_data(data))
+        if column == 3:  # Проверяем, что изменения произошли в столбце с количеством на операцию
+            item = self.table_widget.item(row, column)
+            if item:
+                new_quantity = item.text()
+                # Проверяем, что введены только цифры
+                if not new_quantity.isdigit():
+                    # # Выводим сообщение об ошибке
+                    # QtWidgets.QMessageBox.warning(self.operationDialog, "Ошибка", "Введены некорректные данные. "
+                    #                                                               "Пожалуйста, введите число.")
+                    # Возвращаем старое значение
+                    original_quantity = self.original_data.get((row, column), "")
+                    item.setText(original_quantity)
+                else:
+                    # Проверяем, не превышает ли новое количество на складе
+                    max_quantity = int(self.table_widget.item(row, 2).text())  # Количество на складе
+                    if int(new_quantity) > max_quantity:
+                        # Выводим сообщение об ошибке
+                        QtWidgets.QMessageBox.warning(self.operationDialog, "Ошибка", "Введено количество больше, "
+                                                                                      "чем имеется на складе.")
+                        # Возвращаем старое значение
+                        original_quantity = self.original_data.get((row, column), "")
+                        item.setText(original_quantity)
+                    else:
+                        # Сохраняем новое значение
+                        self.db_data[(row, column)] = new_quantity
+
+    def handleAddItem(self, index):
+        # Проверяем, была ли выбрана опция "Добавить"
+        if index == self.choose_comboBox.count() - 1:
+            add_dialog = Ui_AddDialog(self.operation_type)
+            add_dialog.exec()
+            Ui_OperationDialog.add_dialog_instance = add_dialog
+            self.populateComboBox()
 
 
 if __name__ == "__main__":

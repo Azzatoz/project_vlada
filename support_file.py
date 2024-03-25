@@ -61,7 +61,7 @@ class SupportClass:
                     client_names = [
                         self.connection.execute(
                             f"SELECT name FROM Client WHERE id = {row[2]}"
-                        ).fetchone()[0] for row in self.result_data
+                        ).fetchone()[0] if row[2] is not None else '' for row in self.result_data
                     ]
                     worker_names = [
                         self.connection.execute(

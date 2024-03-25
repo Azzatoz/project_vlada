@@ -1,5 +1,8 @@
 import sqlite3
 from PyQt5 import QtCore, QtGui, QtWidgets
+import docx
+from docx.shared import Pt
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from Dima.OperationDialogController import OperationDialogController
 from Dima.AddDialog import Ui_AddDialog
 from support_file import SupportClass
@@ -246,6 +249,10 @@ class Ui_OperationDialog(object):
         # Обновляем информацию о товарах и складе
         self.controller.update_product_information(selected_items, client_or_warehouse_id)
 
+        # Проверяем состояние чекбокса для создания Word документа
+        if self.check_word.isChecked():
+            self.create_word_document(operation_type, selected_items)
+
         # После сохранения операции вызываем метод для отображения данных
         self.display_current_product_data(self.cursor)
 
@@ -272,6 +279,36 @@ class Ui_OperationDialog(object):
         self.choose_comboBox.addItem("Добавить...")
         self.choose_comboBox.activated.connect(self.handleAddItem)
         self.choose_comboBox.activated[str].connect(self.controller.get_client_or_warehouse_id)
+
+    def create_word_document(self, operation_type, selected_items):
+        document = docx.Document()
+
+        # Заголовок документа
+        document.add_heading(f"Отчет по операции '{operation_type}'", level=1)
+
+        # Добавляем данные операции в документ
+        for selected_row_data in selected_items:
+            table = document.add_table(rows=1, cols=4)
+            table.autofit = True
+            hdr_cells = table.rows[0].cells
+            hdr_cells[0].text = 'ID товара'
+            hdr_cells[1].text = 'Наименование товара'
+            hdr_cells[2].text = 'Количество'
+            hdr_cells[3].text = 'Цена'
+
+            row_cells = table.add_row().cells
+            row_cells[0].text = selected_row_data[0]  # ID товара на складе
+            row_cells[1].text = selected_row_data[1]  # Наименование товара
+            row_cells[2].text = selected_row_data[2]  # Количество
+            row_cells[3].text = selected_row_data[3]  # Цена
+
+        # Сохраняем документ
+        document_path = f"{operation_type}_report.docx"
+        document.save(document_path)
+
+        # Открываем созданный документ
+        import os
+        os.startfile(document_path)
 
     def connect_buttons_events(self, operation_type):
         from Vlada.MainWindow import UiMainWindow

@@ -202,7 +202,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.cancel_button.setEnabled(False)
 
     def delete_and_enable_cancel_button(self):
-        deleted_ids = self.support_instance.delete()
+        deleted_ids = self.support_instance.delete_rows()
         if deleted_ids:
             self.support_instance.save()
             self.cancel_button.setEnabled(True)

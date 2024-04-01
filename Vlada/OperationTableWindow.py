@@ -79,7 +79,7 @@ class UiOperationTableWindow(QtWidgets.QDialog):
 
     def return_product(self):
         if self.row_data[1] in ['Продажа товара', 'Списание товара']:
-            self.deleted_row_ids = self.support_instance.delete()
+            self.deleted_row_ids = self.support_instance.delete_rows()
 
             for added_row_id in self.deleted_row_ids:
                 for item_data in self.initial_result_data:
@@ -91,7 +91,7 @@ class UiOperationTableWindow(QtWidgets.QDialog):
                         self.cursor.execute(update_query, (quantity, product_id))
 
         elif self.row_data[1] == 'Принятие товара':
-            self.deleted_row_ids = self.support_instance.delete()
+            self.deleted_row_ids = self.support_instance.delete_rows()
 
             for deleted_row_id in self.deleted_row_ids:
                 for item_data in self.initial_result_data:
@@ -101,7 +101,7 @@ class UiOperationTableWindow(QtWidgets.QDialog):
                         self.cursor.execute(delete_query, (product_id, ))
 
         elif self.row_data[1] == 'Перемещение товара на другой склад':
-            self.deleted_row_ids = self.support_instance.delete()
+            self.deleted_row_ids = self.support_instance.delete_rows()
 
             for updated_row_id in self.deleted_row_ids:
                 for item_data in self.initial_result_data:
@@ -155,7 +155,7 @@ class UiOperationTableWindow(QtWidgets.QDialog):
 
     def button_action(self, action_type):
         if action_type == "delete":
-            deleted_ids = self.support_instance.delete()
+            deleted_ids = self.support_instance.delete_rows()
             if deleted_ids:
                 self.enable_buttons()
         elif action_type == "save":

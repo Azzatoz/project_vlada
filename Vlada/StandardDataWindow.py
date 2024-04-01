@@ -84,7 +84,7 @@ class UiStandardDataWindow(QtWidgets.QDialog):
     # TODO: Нужно перенести в support_file.py
     def button_action(self, action_type):
         if action_type == "delete":
-            deleted_ids = self.support_instance.delete()
+            deleted_ids = self.support_instance.delete_rows()
             if deleted_ids:
                 self.enable_buttons()
                 self.output_edit.setText(f"Запись(и) успешно удалены.")

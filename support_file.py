@@ -243,7 +243,7 @@ class SupportClass:
         # self.table_widget.parent().cancel_button.setEnabled(False)
         show_notification("Отменены все изменения")
 
-    def delete(self):
+    def delete_rows(self):
         """
         Удаляет выбранные строки / стирает данные в ячейках
         """

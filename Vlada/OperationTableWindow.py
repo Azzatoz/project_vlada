@@ -3,10 +3,11 @@ from support_file import SupportClass
 
 
 class UiOperationTableWindow(QtWidgets.QDialog):
-    def __init__(self, cursor, row_data):
+    def __init__(self, connection, row_data):
         super(UiOperationTableWindow, self).__init__()
 
-        self.cursor = cursor
+        self.connection = connection
+        self.cursor = self.connection.cursor()
         self.row_data = row_data
         self.tab_name_op = 'Operation_product'
         self.tab_name_cur = 'Current_product'
@@ -53,7 +54,7 @@ class UiOperationTableWindow(QtWidgets.QDialog):
 
         self.disable_buttons()
         self.print_row_data()
-        self.support_instance = SupportClass(self.tab_name_op, self.cursor, self.table_widget)
+        self.support_instance = SupportClass(self.tab_name_op, self.connection, self.table_widget)
         self.initial_result_data, result_data, count_columns, headers = (
             self.support_instance.display_table_data(self.row_data[0]))
         self.search_edit.textChanged.connect(lambda text: self.support_instance.search_table(text))
@@ -144,7 +145,9 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         client = self.row_data[2] if self.row_data[2] is not None else ''
         additional_info = self.row_data[5] if self.row_data[5] is not None else ''
         sql_warehouse = f'SELECT warehouse_id FROM {self.tab_name_cur} WHERE delivery_id = {self.row_data[0]}'
-        self.current_warehouse = self.cursor.execute(sql_warehouse).fetchall()
+        self.cursor.execute(sql_warehouse)
+        warehouse_result = self.cursor.fetchall()
+        self.current_warehouse = warehouse_result if warehouse_result is not None else []
 
         self.data_edit.setPlainText(f"Тип проведенной операции: {self.row_data[1]}\n"
                                     f"Текущий склад: {self.current_warehouse[0][0]}\n"

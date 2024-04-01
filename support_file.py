@@ -14,6 +14,7 @@ class SupportClass:
         self.changes_made = False
         self.table_name = table_name
         self.connection = connection
+        self.cursor = self.connection.cursor()
         self.table_widget = table_widget
         self.original_data = {}
         self.table_widget.sort_order = None
@@ -40,15 +41,21 @@ class SupportClass:
 
         else:
             if self.connection and self.table_name:
-                query_headers = f"PRAGMA table_info({self.table_name})"
-                result_headers = self.connection.execute(query_headers).fetchall()
-                self.headers = [column[1] for column in result_headers if column[1] != 'operation_id']
+                query_headers = (f"SELECT COLUMN_NAME FROM information_schema.columns WHERE table_name = "
+                                 f"'{self.table_name}'")
+                self.cursor.execute(query_headers)
+                result_headers = self.cursor.fetchall()
+                print(result_headers)
+                self.headers = [column[0] for column in result_headers if column[0] != 'operation_id']
                 self.count_columns = len(self.headers)
+                print(self.headers)
+                print(self.count_columns)
                 columns = ', '.join(self.headers)
                 query_data = f"SELECT {columns} FROM {self.table_name}"
                 if self.table_name == 'Operation_product':
                     query_data += f" WHERE operation_id = {row_id}"
-                self.result_data = self.connection.execute(query_data).fetchall()
+                self.cursor.execute(query_data)
+                self.result_data = self.cursor.fetchall()
                 self.initial_result_data = self.result_data[:]
                 self.row_id = row_id
 
@@ -58,16 +65,26 @@ class SupportClass:
                 self.table_widget.setHorizontalHeaderLabels(self.current_column_names)
 
                 if self.table_name == 'Operation':
-                    client_names = [
-                        self.connection.execute(
-                            f"SELECT name FROM Client WHERE id = {row[2]}"
-                        ).fetchone()[0] if row[2] is not None else '' for row in self.result_data
-                    ]
-                    worker_names = [
-                        self.connection.execute(
+                    client_names = []
+                    for row in self.result_data:
+                        if row[2] is not None:
+                            self.cursor.execute(
+                                f"SELECT name FROM Client WHERE id = {row[2]}"
+                            )
+                            result = self.cursor.fetchone()
+                            client_name = result[0] if result is not None else ''
+                            client_names.append(client_name)
+                        else:
+                            client_names.append('')
+
+                    worker_names = []
+                    for row in self.result_data:
+                        self.cursor.execute(
                             f"SELECT name FROM Worker WHERE id = {row[3]}"
-                        ).fetchone()[0] for row in self.result_data
-                    ]
+                        )
+                        result = self.cursor.fetchone()
+                        worker_name = result[0] if result is not None else ''
+                        worker_names.append(worker_name)
 
                     for row_index, row_data in enumerate(self.result_data):
                         client_name = client_names[row_index] if row_index < len(client_names) else ""
@@ -76,18 +93,24 @@ class SupportClass:
                         self.result_data[row_index] = new_row_data
 
                 elif self.table_name == 'Operation_product':
-                    product_property_names = [
-                        self.connection.execute(
+                    product_property_names = []
+                    for row in self.result_data:
+                        self.cursor.execute(
                             f"SELECT DISTINCT current_product_name FROM Product_property "
                             f"WHERE current_product_id = {row[1]}"
-                        ).fetchone()[0] for row in self.result_data
-                    ]
+                        )
+                        result = self.cursor.fetchone()
+                        product_property_name = result[0] if result is not None else ''
+                        product_property_names.append(product_property_name)
 
-                    warehouse_names = [
-                        self.connection.execute(
+                    warehouse_names = []
+                    for row in self.result_data:
+                        self.cursor.execute(
                             f"SELECT name FROM Warehouse WHERE id = {row[2]}"
-                        ).fetchone()[0] for row in self.result_data
-                    ]
+                        )
+                        result = self.cursor.fetchone()
+                        warehouse_name = result[0] if result is not None else ''
+                        warehouse_names.append(warehouse_name)
 
                     for row_index, row_data in enumerate(self.result_data):
                         product_property_name = product_property_names[row_index] \
@@ -97,12 +120,15 @@ class SupportClass:
                         self.result_data[row_index] = new_row_data
 
                 elif self.table_name == 'Worker':
-                    position_names = [
-                        self.connection.execute(
+                    position_names = []
+                    for row in self.result_data:
+                        self.cursor.execute(
                             f"SELECT name_position FROM Position "
                             f"WHERE id = {row[4]}"
-                        ).fetchone()[0] for row in self.result_data
-                    ]
+                        )
+                        result = self.cursor.fetchone()
+                        position_name = result[0] if result is not None else ''
+                        position_names.append(position_name)
 
                     for row_index, row_data in enumerate(self.result_data):
                         name_position = position_names[row_index] if row_index < len(position_names) else ""

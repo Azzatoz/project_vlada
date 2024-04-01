@@ -1,13 +1,14 @@
-import sqlite3
+import mysql.connector
 from PyQt5 import QtCore, QtWidgets
 from Vlada.MainWindow import UiMainWindow
+from Vlada.db import create_database
 from support_file import show_notification
 
 
 class Ui_AuthorizationWindow(object):
 
     # Конструктор класса
-    def __init__(self, authorization_dialog):
+    def __init__(self, authorization_dialog, conn):
 
         # Создание окна приложения
         self.authorization_dialog = authorization_dialog
@@ -100,6 +101,10 @@ class Ui_AuthorizationWindow(object):
         self.retranslateUi(self.authorization_dialog)
         QtCore.QMetaObject.connectSlotsByName(self.authorization_dialog)
 
+        # Подключение к базе данных
+        self.conn = conn
+        self.cursor = conn.cursor()
+
     def retranslateUi(self, authorization_dialog):
         _translate = QtCore.QCoreApplication.translate
         authorization_dialog.setWindowTitle(_translate("authorizationWindow", "Авторизация"))
@@ -120,29 +125,33 @@ class Ui_AuthorizationWindow(object):
     def login(self):
         username = self.Username.text()
         password = self.Password.text()
+        try:
+            # Выполнение SQL-запроса для поиска пользователя в базе данных
+            query = 'SELECT * FROM Worker WHERE username = %s AND password = %s'
+            self.cursor.execute(query, (username, password))
 
-        # Подключение к базе данных
-        conn = sqlite3.connect('warehouse.db')
-        c = conn.cursor()
+            # Получение результата запроса
+            result = self.cursor.fetchone()
 
-        # Поиск пользователя в базе данных
-        c.execute('SELECT * FROM Worker WHERE username=? AND password=?', (username, password))
-        result = c.fetchone()
+            if result:
+                # Создание экземпляра QMainWindow
+                main_window = UiMainWindow(result[1], self.conn)
+                # Показ основного окна
+                main_window.show()
+                # Закрытие окна авторизации
+                self.authorization_dialog.accept()
+            else:
+                show_notification("Неверное имя пользователя или пароль")
 
-        # Закрытие соединения с базой данных
-        conn.close()
+        except mysql.connector.Error as e:
+            # Обработка ошибок подключения или выполнения SQL-запроса
+            print("Ошибка при выполнении запроса:", e)
 
-        if result:
-            # Создаем экземпляр QMainWindow
-            # попросить принять имя пользователя
-            main_window = UiMainWindow(result[1])
-            # Показываем основное окно
-            main_window.show()
-            UiMainWindow.ui_table_instance = main_window
-            # Закрываем окно авторизации
-            self.authorization_dialog.accept()
-        else:
-            show_notification("Неверное имя пользователя или пароль")
+        finally:
+            # Закрытие соединения с базой данных
+            if self.conn.is_connected():
+                self.cursor.close()
+                self.conn.close()
 
     def register(self):
         if self.LogUp.text() == "Зарегистрироваться":
@@ -192,62 +201,68 @@ class Ui_AuthorizationWindow(object):
         username = self.Username.text()
         password = self.Password.text()
 
-        # Проверка на пустые поля
-        if not firstname or not lastname or not phone or not birthdate or not username or not password:
-            show_notification("Заполните все поля")
-            return
+        try:
+            # Проверка на пустые поля
+            if not firstname or not lastname or not phone or not birthdate or not username or not password:
+                show_notification("Заполните все поля")
+                return
 
-        # Подключение к базе данных
-        conn = sqlite3.connect('warehouse.db')
-        c = conn.cursor()
+            # Проверка на уникальность логина
+            self.cursor.execute("SELECT * FROM Worker WHERE username = %s", (username,))
+            existing_user = self.cursor.fetchone()
+            if existing_user:
+                show_notification("Пользователь с таким логином уже существует")
+                return
 
-        # Проверка на уникальность логина
-        c.execute("SELECT * FROM Worker WHERE username = ?", (username,))
-        existing_user = c.fetchone()
-        if existing_user:
-            show_notification("Пользователь с таким логином уже существует")
-            return
+            # Получение ID должности "Новый пользователь"
+            self.cursor.execute("SELECT id FROM Position WHERE name_position = 'Новый пользователь'")
+            position_id = cursor.fetchone()[0]
 
-        # Получение ID должности "Новый пользователь"
-        c.execute("SELECT id FROM Position WHERE name_position = 'Новый пользователь'")
-        position_id = c.fetchone()[0]
+            # Вставка данных нового пользователя в таблицу Worker
+            self.cursor.execute(
+                "INSERT INTO Worker (name, phone_number, birthday, username, password, position_id)"
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (f"{firstname} {lastname} {middlename}", phone, birthdate, username, password, position_id))
 
-        # Вставка данных нового пользователя в таблицу Worker
-        c.execute(
-            "INSERT INTO Worker (name, phone_number, birthday, username, password, position_id)"
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (f"{firstname} {lastname} {middlename}", phone, birthdate, username, password, position_id))
+            # Создание нового пользователя MySQL
+            create_user_query = f"CREATE USER '{username}'@'localhost' IDENTIFIED BY '{password}'"
+            self.cursor.execute(create_user_query)
 
-        # Подтверждение изменений
-        conn.commit()
+            # Назначение привилегий новому пользователю
+            grant_privileges_query = f"GRANT ALL PRIVILEGES ON your_database_name.* TO '{username}'@'localhost'"
+            self.cursor.execute(grant_privileges_query)
 
-        # Закрытие соединения с базой данных
-        conn.close()
+            # Подтверждение изменений
+            self.conn.commit()
 
-        show_notification("Регистрация завершена")
+            # Закрытие соединения с базой данных
+            self.cursor.close()
+            self.conn.close()
 
-        # Возврат к обычному режиму входа
-        self.label_1.setVisible(False)
-        self.FirstName.setVisible(False)
-        self.label_2.setVisible(False)
-        self.LastName.setVisible(False)
-        self.label_3.setVisible(False)
-        self.MiddleName.setVisible(False)
-        self.label_4.setVisible(False)
-        self.Phone.setVisible(False)
-        self.label_5.setVisible(False)
-        self.BirthDate.setVisible(False)
-        self.LogIn.setText("Войти")
-        self.LogIn.clicked.disconnect(self.confirm_registration)
-        self.LogIn.clicked.connect(self.login)
-        self.LogUp.setText("Зарегистрироваться")
+            show_notification("Регистрация завершена")
 
+            # Возврат к обычному режиму входа
+            self.label_1.setVisible(False)
+            self.FirstName.setVisible(False)
+            self.label_2.setVisible(False)
+            self.LastName.setVisible(False)
+            self.label_3.setVisible(False)
+            self.MiddleName.setVisible(False)
+            self.label_4.setVisible(False)
+            self.Phone.setVisible(False)
+            self.label_5.setVisible(False)
+            self.BirthDate.setVisible(False)
+            self.LogIn.setText("Войти")
+            self.LogIn.clicked.disconnect(self.confirm_registration)
+            self.LogIn.clicked.connect(self.login)
+            self.LogUp.setText("Зарегистрироваться")
 
-if __name__ == "__main__":
-    import sys
+        except mysql.connector.Error as e:
+            # Обработка ошибок подключения или выполнения SQL-запросов
+            print("Ошибка при выполнении запроса:", e)
 
-    app = QtWidgets.QApplication(sys.argv)
-    AutorizationDialog = QtWidgets.QDialog
-    ui_autorization_dialog = Ui_AuthorizationWindow(AutorizationDialog)
-    ui_autorization_dialog.show()
-    sys.exit(app.exec_())
+        finally:
+            # Закрытие соединения с базой данных
+            if self.conn.is_connected():
+                self.cursor.close()
+                self.conn.close()

@@ -128,11 +128,11 @@ class Ui_AuthorizationWindow(object):
         try:
             # Выполнение SQL-запроса для поиска пользователя в базе данных
             query = 'SELECT * FROM Worker WHERE username = %s AND password = %s'
+            print(query)
             self.cursor.execute(query, (username, password))
 
             # Получение результата запроса
             result = self.cursor.fetchone()
-
             if result:
                 # Создание экземпляра QMainWindow
                 main_window = UiMainWindow(result[1], self.conn)
@@ -146,12 +146,6 @@ class Ui_AuthorizationWindow(object):
         except mysql.connector.Error as e:
             # Обработка ошибок подключения или выполнения SQL-запроса
             print("Ошибка при выполнении запроса:", e)
-
-        finally:
-            # Закрытие соединения с базой данных
-            if self.conn.is_connected():
-                self.cursor.close()
-                self.conn.close()
 
     def register(self):
         if self.LogUp.text() == "Зарегистрироваться":
@@ -260,9 +254,3 @@ class Ui_AuthorizationWindow(object):
         except mysql.connector.Error as e:
             # Обработка ошибок подключения или выполнения SQL-запросов
             print("Ошибка при выполнении запроса:", e)
-
-        finally:
-            # Закрытие соединения с базой данных
-            if self.conn.is_connected():
-                self.cursor.close()
-                self.conn.close()

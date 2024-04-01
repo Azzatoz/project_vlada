@@ -1,18 +1,60 @@
-import sqlite3
-from PyQt5 import QtCore, QtGui, QtWidgets
+import mysql.connector
 import docx
-from docx.shared import Pt
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from Dima.OperationDialogController import OperationDialogController
+from PyQt5 import QtCore, QtWidgets
 from Dima.AddDialog import Ui_AddDialog
+from Dima.OperationDialogController import OperationDialogController
 from support_file import SupportClass
 from support_file import show_notification
 
 
-# TODO: изменить получение клиента или склада на просто comboBox в OperationDialog (chooseDialog не нужен), Done;
-#  добавить добавление нового клиента, Done;
-#  чтобы сохранение обрабатывало сразу все данные, Done;
-#  добавить обновление в MainWindow (попробовать с помощью commit'a)
+# TODO: добавить обновление в MainWindow (попробовать с помощью commit'a)
+#  сделать функцию принять товар чтобы пользователь вписывал
+#  или выбирал дату поставки и количество товара добавить на товар
+#  примерно тоже самое сделать для функции переместить товар
+
+
+def create_word_document(operation_type, worker_name, selected_destination, selected_items, current_time):
+    document = docx.Document()
+
+    # Заголовок документа
+    document.add_heading(f"Отчет по операции '{operation_type}'", level=1)
+
+    # Добавляем информацию о дате и времени операции, работнике и месте назначения
+    document.add_paragraph(f"Дата и время операции: {current_time}")
+    document.add_paragraph(f"Выполнил: {worker_name}")
+    destination_type = "Клиент" if operation_type == "Продать" else "Склад"
+    document.add_paragraph(f"{destination_type}: {selected_destination}")
+
+    # Флаг для отслеживания, были ли уже добавлены заголовки таблицы
+    headers_added = False
+
+    # Добавляем данные операции в документ
+    for selected_row_data in selected_items:
+        # Создаем таблицу и добавляем заголовки только один раз
+        if not headers_added:
+            table = document.add_table(rows=1, cols=4)
+            table.autofit = True
+            hdr_cells = table.rows[0].cells
+            hdr_cells[0].text = 'ID товара'
+            hdr_cells[1].text = 'Наименование товара'
+            hdr_cells[2].text = 'Количество'
+            hdr_cells[3].text = 'Цена'
+            headers_added = True
+
+        # Добавляем данные товара в таблицу
+        row_cells = table.add_row().cells
+        row_cells[0].text = selected_row_data[0]  # ID товара на складе
+        row_cells[1].text = selected_row_data[1]  # Наименование товара
+        row_cells[2].text = selected_row_data[2]  # Количество
+        row_cells[3].text = selected_row_data[3]  # Цена
+
+    # Сохраняем документ
+    document_path = f"{operation_type}_report_{current_time}.docx"
+    document.save(document_path)
+
+    # Открываем созданный документ
+    import os
+    os.startfile(document_path)
 
 
 class Ui_OperationDialog(object):
@@ -130,7 +172,7 @@ class Ui_OperationDialog(object):
                                                     operation, connection, self.worker_name)
         self.show()
         # отображаем таблицу с данными
-        self.display_current_product_data(self.cursor)
+        self.display_current_product_data()
         self.table_widget.cellChanged.connect(self.handle_cell_changed)
 
         # определяем функции к кнопкам
@@ -149,73 +191,82 @@ class Ui_OperationDialog(object):
     def show(self):
         self.operationDialog.show()
 
-    def display_current_product_data(self, cursor):
-        # данные из таблицы Current_product и Product_property
-        query_data = f"SELECT cp.id, cp.quantity, cp.delivery_id, cp.warehouse_id, cp.delivery_date, pp.current_product_name " \
-                     f"FROM {self.table_name} AS cp " \
-                     f"JOIN Product_property AS pp ON cp.id = pp.current_product_id"
-        cursor.execute(query_data)
-        result_data = cursor.fetchall()
+    def display_current_product_data(self):
+        try:
+            # SQL-запрос для получения данных о товарах на складе
+            query_data = f"SELECT cp.id, cp.current_product_id, cp.quantity, cp.delivery_id, cp.warehouse_id, cp.delivery_date, pp.current_product_name " \
+                         f"FROM {self.table_name} AS cp " \
+                         f"JOIN Product_property AS pp ON cp.current_product_id = pp.id"
 
-        # имена операций и складов
-        operator_names = [
-            cursor.execute(
-                f"SELECT type FROM Operation WHERE id = {row[2]}"
-            ).fetchone()[0] for row in result_data
-        ]
-        warehouse_names = [
-            cursor.execute(
-                f"SELECT name FROM Warehouse WHERE id = {row[3]}"
-            ).fetchone()[0] for row in result_data
-        ]
+            # Выполнение запроса
+            self.cursor.execute(query_data)
+            result_data = self.cursor.fetchall()
 
-        # новый столбец с заголовком в зависимости от типа операции
-        operation_column_title = "Количество на " + self.operation_type.lower()
+            # Список для хранения имен операций
+            operator_names = []
+            # Список для хранения имен складов
+            warehouse_names = []
 
-        # Устанавливаем заголовки таблицы, добавляя новый столбец
-        headers = ['ID', 'Наименование', 'Количество на складе', operation_column_title, 'Поставки', 'Склад',
-                   'Дата поставки']
-        num_cols = len(headers)
+            # Получение имен операций и складов
+            for row in result_data:
+                # Получение имени операции
+                operation_id = row[3]
+                self.cursor.execute(f"SELECT type FROM Operation WHERE id = {operation_id}")
+                operator_name = self.cursor.fetchone()[0]
+                operator_names.append(operator_name)
 
-        # Устанавливаем количество строк и столбцов
-        num_rows = len(result_data)
+                # Получение имени склада
+                warehouse_id = row[4]
+                self.cursor.execute(f"SELECT name FROM Warehouse WHERE id = {warehouse_id}")
+                warehouse_name = self.cursor.fetchone()[0]
+                warehouse_names.append(warehouse_name)
 
-        # Устанавливаем количество строк и столбцов в table_widget
-        self.table_widget.setRowCount(num_rows)
-        self.table_widget.setColumnCount(num_cols)
-        self.table_widget.setHorizontalHeaderLabels(headers)
+            # Добавление нового столбца в заголовок таблицы
+            operation_column_title = "Количество на " + self.operation_type.lower()
+            headers = ['ID', 'ID_товара', 'Наименование', 'Количество на складе', operation_column_title, 'Поставки', 'Склад',
+                       'Дата поставки']
+            num_cols = len(headers)
+            self.table_widget.setColumnCount(num_cols)
+            self.table_widget.setHorizontalHeaderLabels(headers)
 
-        # Заполняем таблицу данными
-        for row_index, row_data in enumerate(result_data):
-            # Получаем данные строки
-            product_id, quantity, delivery_id, warehouse_id, delivery_date, product_name = row_data
-
-            # Создаем элементы QTableWidgetItem для каждого столбца
-            item_id = QtWidgets.QTableWidgetItem(str(product_id))
-            item_name = QtWidgets.QTableWidgetItem(str(product_name))
-            item_quantity = QtWidgets.QTableWidgetItem(str(quantity))
-            item_operator = QtWidgets.QTableWidgetItem(operator_names[row_index])
-            item_warehouse = QtWidgets.QTableWidgetItem(warehouse_names[row_index])
-            item_delivery_date = QtWidgets.QTableWidgetItem(str(delivery_date))
-
-            # Устанавливаем элементы в соответствующие ячейки
-            self.table_widget.setItem(row_index, 0, item_id)
-            self.table_widget.setItem(row_index, 1, item_name)
-            self.table_widget.setItem(row_index, 2, item_quantity)
-            self.table_widget.setItem(row_index, 3, QtWidgets.QTableWidgetItem(""))  # Пустая ячейка для нового столбца
-            self.table_widget.setItem(row_index, 4, item_operator)
-            self.table_widget.setItem(row_index, 5, item_warehouse)
-            self.table_widget.setItem(row_index, 6, item_delivery_date)
-
-            # Устанавливаем флаги для ячеек редактирования
+            # Заполнение таблицы данными
+            self.table_widget.setRowCount(len(result_data))
             for row_index, row_data in enumerate(result_data):
+                # Получение данных строки
+                product_id, current_product_id, quantity, delivery_id, warehouse_id, delivery_date, product_name = row_data
+
+                # Создание элементов QTableWidgetItem для каждого столбца
+                item_id = QtWidgets.QTableWidgetItem(str(product_id))
+                item_current_product_id =QtWidgets.QTableWidgetItem(str(current_product_id))
+                item_name = QtWidgets.QTableWidgetItem(str(product_name))
+                item_quantity = QtWidgets.QTableWidgetItem(str(quantity))
+                item_operator = QtWidgets.QTableWidgetItem(operator_names[row_index])
+                item_warehouse = QtWidgets.QTableWidgetItem(warehouse_names[row_index])
+                item_delivery_date = QtWidgets.QTableWidgetItem(str(delivery_date))
+
+                # Установка элементов в соответствующие ячейки
+                self.table_widget.setItem(row_index, 0, item_id)
+                self.table_widget.setItem(row_index, 1, item_current_product_id)
+                self.table_widget.setItem(row_index, 2, item_name)
+                self.table_widget.setItem(row_index, 3, item_quantity)
+                self.table_widget.setItem(row_index, 4,
+                                          QtWidgets.QTableWidgetItem(""))  # Пустая ячейка для нового столбца
+                self.table_widget.setItem(row_index, 5, item_operator)
+                self.table_widget.setItem(row_index, 6, item_warehouse)
+                self.table_widget.setItem(row_index, 7, item_delivery_date)
+
+                # Установка флагов для ячеек редактирования
                 for column_index in range(num_cols):
                     item = self.table_widget.item(row_index, column_index)
-                    if item and column_index == 3:  # Проверяем, что это столбец с количеством на складе
+                    if item and column_index == 4:  # Проверка, что это столбец с количеством на складе
                         item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
                     else:
                         if item:
                             item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)  # Убираем флаг редактирования
+
+        except mysql.connector.Error as e:
+            # Обработка ошибок при выполнении SQL-запросов
+            print("Ошибка при выполнении запроса:", e)
 
     def save_operation_data(self):
         """
@@ -224,7 +275,7 @@ class Ui_OperationDialog(object):
         # Получаем тип операции и текущее время
         import datetime
         operation_type = self.operation_type
-        current_time = datetime.datetime.now().strftime("%d-%m-%Y")
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d")
 
         # Получаем идентификатор работника
         worker_id = self.controller.get_worker_id(self.worker_name)
@@ -234,7 +285,6 @@ class Ui_OperationDialog(object):
 
         # Получаем идентификатор клиента или склада
         client_or_warehouse_id = self.controller.get_client_or_warehouse_id(selected_destination)
-        print(client_or_warehouse_id)
 
         # Получаем выбранные товары для операции
         selected_items = self.controller.get_selected_items()
@@ -242,7 +292,6 @@ class Ui_OperationDialog(object):
             show_notification("Выберите товары для операции")
             return
 
-        # Вставляем данные об операции
         self.controller.insert_operation_data(operation_type, client_or_warehouse_id, worker_id, current_time,
                                               additional_characteristics=None, selected_items=selected_items)
 
@@ -251,10 +300,10 @@ class Ui_OperationDialog(object):
 
         # Проверяем состояние чекбокса для создания Word документа
         if self.check_word.isChecked():
-            self.create_word_document(operation_type, selected_items)
+            create_word_document(operation_type, self.worker_name, selected_destination, selected_items, current_time)
 
         # После сохранения операции вызываем метод для отображения данных
-        self.display_current_product_data(self.cursor)
+        self.display_current_product_data()
 
     def populateComboBox(self):
         cursor = self.cursor
@@ -267,6 +316,10 @@ class Ui_OperationDialog(object):
             clients = cursor.fetchall()
             for client in clients:
                 self.choose_comboBox.addItem(client[0])
+            # Добавляем опцию "Добавить" после основных элементов
+            self.choose_comboBox.addItem("Добавить...")
+            self.choose_comboBox.activated.connect(self.handleAddItem)
+            self.choose_comboBox.activated[str].connect(self.controller.get_client_or_warehouse_id)
         elif self.operation_type == "Переместить":
             # Запрос названий складов из базы данных и заполнение comboBox
             query = "SELECT name FROM Warehouse"
@@ -275,47 +328,12 @@ class Ui_OperationDialog(object):
             for warehouse in warehouses:
                 self.choose_comboBox.addItem(warehouse[0])
 
-        # Добавляем опцию "Добавить" после основных элементов
-        self.choose_comboBox.addItem("Добавить...")
-        self.choose_comboBox.activated.connect(self.handleAddItem)
-        self.choose_comboBox.activated[str].connect(self.controller.get_client_or_warehouse_id)
-
-    def create_word_document(self, operation_type, selected_items):
-        document = docx.Document()
-
-        # Заголовок документа
-        document.add_heading(f"Отчет по операции '{operation_type}'", level=1)
-
-        # Добавляем данные операции в документ
-        for selected_row_data in selected_items:
-            table = document.add_table(rows=1, cols=4)
-            table.autofit = True
-            hdr_cells = table.rows[0].cells
-            hdr_cells[0].text = 'ID товара'
-            hdr_cells[1].text = 'Наименование товара'
-            hdr_cells[2].text = 'Количество'
-            hdr_cells[3].text = 'Цена'
-
-            row_cells = table.add_row().cells
-            row_cells[0].text = selected_row_data[0]  # ID товара на складе
-            row_cells[1].text = selected_row_data[1]  # Наименование товара
-            row_cells[2].text = selected_row_data[2]  # Количество
-            row_cells[3].text = selected_row_data[3]  # Цена
-
-        # Сохраняем документ
-        document_path = f"{operation_type}_report.docx"
-        document.save(document_path)
-
-        # Открываем созданный документ
-        import os
-        os.startfile(document_path)
-
     def connect_buttons_events(self, operation_type):
         from Vlada.MainWindow import UiMainWindow
-        mainWindow_instance = UiMainWindow(self.worker_name)
+        # mainWindow_instance = UiMainWindow(self.worker_name, self.connection)
         # Подключение событий к обработчикам
         self.save_button.clicked.connect(self.save_operation_data)
-        self.cancel_button.clicked.connect(mainWindow_instance.cancel_deletion_row)
+        # self.cancel_button.clicked.connect(mainWindow_instance.cancel_deletion_row)
         if operation_type == "Списать":
             self.choose_comboBox.clicked.connect(self.controller.write_off_product)
         elif operation_type in ["Продать", "Переместить"]:
@@ -328,7 +346,7 @@ class Ui_OperationDialog(object):
         :param column:
         :return:
         """
-        if column == 3:  # Проверяем, что изменения произошли в столбце с количеством на операцию
+        if column == 4:  # Проверяем, что изменения произошли в столбце с количеством на операцию
             item = self.table_widget.item(row, column)
             if item:
                 new_quantity = item.text()
@@ -342,7 +360,7 @@ class Ui_OperationDialog(object):
                     item.setText(original_quantity)
                 else:
                     # Проверяем, не превышает ли новое количество на складе
-                    max_quantity = int(self.table_widget.item(row, 2).text())  # Количество на складе
+                    max_quantity = int(self.table_widget.item(row, 3).text())  # Количество на складе
                     if int(new_quantity) > max_quantity:
                         # Выводим сообщение об ошибке
                         QtWidgets.QMessageBox.warning(self.operationDialog, "Ошибка", "Введено количество больше, "
@@ -365,9 +383,15 @@ class Ui_OperationDialog(object):
 
 if __name__ == "__main__":
     import sys
+    from PyQt5 import QtWidgets
+    from Dima.OperationDialog import Ui_OperationDialog
 
-    conn = sqlite3.connect('warehouse.db')
-    c = conn.cursor()
+    conn = mysql.connector.connect(
+        host='localhost',
+        user='root',
+        password='admin',
+        database='warehouse'
+    )
     app = QtWidgets.QApplication(sys.argv)
-    ui = Ui_OperationDialog("Продать", c, "Иван Иванов")  # тест
+    ui = Ui_OperationDialog("Продать", conn, "Иван Иванов")
     sys.exit(app.exec_())

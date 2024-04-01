@@ -5,13 +5,10 @@ from Vlada.StandardDataWindow import UiStandardDataWindow
 from support_file import SupportClass
 from support_file import show_notification
 from PyQt5 import QtCore, QtWidgets
-import sqlite3
-
-path = 'warehouse.db'
 
 
 class UiMainWindow(QtWidgets.QMainWindow):
-    def __init__(self, name_user):
+    def __init__(self, name_user, connection):
         super(UiMainWindow, self).__init__()
 
         self.table_name = 'Operation'
@@ -20,7 +17,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.count_columns = None
         self.name_user = name_user
 
-        self.connection = sqlite3.connect(path)
+        self.connection = connection
         self.cursor = self.connection.cursor()
 
         self.setObjectName("MainWindow")
@@ -176,7 +173,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         from Dima.AutorizationWindow import Ui_AuthorizationWindow
         self.close()
         authorization_dialog = QtWidgets.QDialog()
-        auth_window = Ui_AuthorizationWindow(authorization_dialog)
+        auth_window = Ui_AuthorizationWindow(authorization_dialog, conn)
         auth_window.show()
         UiMainWindow.auth_window_instance = auth_window
 
@@ -214,7 +211,8 @@ class UiMainWindow(QtWidgets.QMainWindow):
 if __name__ == "__main__":
     import sys
     user_name = None
+    conn = None
     app = QtWidgets.QApplication(sys.argv)
-    ui = UiMainWindow(user_name)
+    ui = UiMainWindow(user_name, conn)
     ui.show()
     sys.exit(app.exec_())

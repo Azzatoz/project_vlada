@@ -31,7 +31,7 @@ class SupportClass:
             'Worker': ["Идентификатор", "Имя сотрудника", "День рождения", "Номер телефона",
                        "Должность", "Логин", "Пароль"],
             'Client': ["Идентификатор", "Имя клиента", "Номер телефона", "Другие данные"],
-            'Position': ["Идентификатор", "Название должности", "Зарплата", "Уровень доступа"],
+            'Positions': ["Идентификатор", "Название должности", "Зарплата", "Уровень доступа"],
             'Warehouse': ["Идентификатор", "Номер склада", "Адрес", "Координаты", "Геолокация", "Имеющиеся товары"]
         }
 
@@ -42,14 +42,11 @@ class SupportClass:
         else:
             if self.connection and self.table_name:
                 query_headers = (f"SELECT COLUMN_NAME FROM information_schema.columns WHERE table_name = "
-                                 f"'{self.table_name}'")
+                                 f"'{self.table_name}' ORDER BY ordinal_position")
                 self.cursor.execute(query_headers)
                 result_headers = self.cursor.fetchall()
-                print(result_headers)
                 self.headers = [column[0] for column in result_headers if column[0] != 'operation_id']
                 self.count_columns = len(self.headers)
-                print(self.headers)
-                print(self.count_columns)
                 columns = ', '.join(self.headers)
                 query_data = f"SELECT {columns} FROM {self.table_name}"
                 if self.table_name == 'Operation_product':
@@ -97,7 +94,7 @@ class SupportClass:
                     for row in self.result_data:
                         self.cursor.execute(
                             f"SELECT DISTINCT current_product_name FROM Product_property "
-                            f"WHERE current_product_id = {row[1]}"
+                            f"WHERE id = {row[1]}"
                         )
                         result = self.cursor.fetchone()
                         product_property_name = result[0] if result is not None else ''
@@ -123,7 +120,7 @@ class SupportClass:
                     position_names = []
                     for row in self.result_data:
                         self.cursor.execute(
-                            f"SELECT name_position FROM Position "
+                            f"SELECT name_position FROM Positions "
                             f"WHERE id = {row[4]}"
                         )
                         result = self.cursor.fetchone()
@@ -288,8 +285,8 @@ class SupportClass:
 
                 # Удаляем строку из базы данных, если id существует
                 if deleted_row_id is not None:
-                    delete_query = f"DELETE FROM {self.table_name} WHERE id = ?;"
-                    self.connection.execute(delete_query, (deleted_row_id,))
+                    delete_query = f"DELETE FROM {self.table_name} WHERE id = %s;"
+                    self.cursor.execute(delete_query, (deleted_row_id,))
                     deleted_row_ids.append(deleted_row_id)
 
         else:
@@ -332,7 +329,8 @@ class SupportClass:
         """
         # Получаем старые данные из базы данных
         query_data = f"SELECT * FROM {self.table_name}"
-        result_data = self.connection.execute(query_data).fetchall()
+        self.cursor.execute(query_data)
+        result_data = self.cursor.fetchall()
 
         result_data.clear()
 
@@ -382,9 +380,8 @@ class SupportClass:
         """
         Вставляет новую запись в базу данных
         """
-        insert_query = f"INSERT INTO {self.table_name} VALUES ({', '.join(['?' for _ in range(len(new_data))])});"
-        with self.connection:
-            self.connection.execute(insert_query, new_data)
+        insert_query = f"INSERT INTO {self.table_name} VALUES ({', '.join(['%s' for _ in range(len(new_data))])});"
+        self.cursor.execute(insert_query, new_data)
         self.connection.commit()
 
     def update_record(self, new_data, old_data):
@@ -392,12 +389,13 @@ class SupportClass:
         Обновляет существующую запись в базе данных
         """
         update_query = f"UPDATE {self.table_name} SET "
-        update_query += ', '.join([f"{self.headers[col]} = ?" for col in
-                                   range(1, len(new_data))])  # Не включаем id в обновление
-        update_query += f" WHERE id = ?;"
+        update_query += ', '.join(
+            [f"{self.headers[col]} = %s" for col in range(1, len(new_data))])
+        update_query += " WHERE id = %s;"
 
-        with self.connection:
-            self.connection.execute(update_query, (*new_data[1:], old_data[0]))
+        data_to_update = new_data[1:] + [old_data[0]]
+
+        self.cursor.execute(update_query, data_to_update)
         self.connection.commit()
 
     def write_off(self):

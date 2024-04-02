@@ -7,7 +7,7 @@ class UiChoosePositionWindow(QtWidgets.QDialog):
         super(UiChoosePositionWindow, self).__init__()
 
         self.connection = connection
-        self.table_name = 'Position'
+        self.table_name = 'Positions'
         self.name_position = []
         self.initial_db_data = []
         self.change_db_data = []

@@ -128,7 +128,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.open_worker_btn.clicked.connect(partial(self.open_standard_data_window, 'Worker'))
         self.open_client_btn.clicked.connect(partial(self.open_standard_data_window, 'Client'))
         self.open_warehouse_btn.clicked.connect(partial(self.open_standard_data_window, 'Warehouse'))
-        self.open_position_btn.clicked.connect(partial(self.open_standard_data_window, 'Position'))
+        self.open_position_btn.clicked.connect(partial(self.open_standard_data_window, 'Positions'))
 
     def open_operation_window(self, operation):
         operation_window = Ui_OperationWindow(operation, self.connection, self.name_user)
@@ -189,8 +189,9 @@ class UiMainWindow(QtWidgets.QMainWindow):
         for deleted_row_id in deleted_row_ids:
             deleted_rows_data = next(deleted_row_data for deleted_row_data in self.initial_db_data
                                      if deleted_row_data[0] == deleted_row_id)
-            self.cursor.execute(f"INSERT INTO {self.table_name} VALUES "
-                                f"({','.join(['?'] * self.count_columns)})", deleted_rows_data)
+            placeholders = ', '.join(['%s'] * len(deleted_rows_data))
+            sql_insert = f"INSERT INTO {self.table_name} VALUES ({placeholders})"
+            self.cursor.execute(sql_insert, deleted_rows_data)
 
         self.connection.commit()
         self.support_instance.display_table_data()

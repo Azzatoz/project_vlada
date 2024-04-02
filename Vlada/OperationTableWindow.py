@@ -88,7 +88,7 @@ class UiOperationTableWindow(QtWidgets.QDialog):
                         product_id = item_data[1]
                         quantity = item_data[3]
 
-                        update_query = f"UPDATE {self.tab_name_cur} SET quantity = quantity + ? WHERE id = ?"
+                        update_query = f"UPDATE {self.tab_name_cur} SET quantity = quantity + %s WHERE id = %s"
                         self.cursor.execute(update_query, (quantity, product_id))
 
         elif self.row_data[1] == 'Принятие товара':
@@ -98,8 +98,12 @@ class UiOperationTableWindow(QtWidgets.QDialog):
                 for item_data in self.initial_result_data:
                     if item_data[0] == int(deleted_row_id):
                         product_id = item_data[1]
-                        delete_query = f"DELETE FROM {self.tab_name_cur} WHERE id = ?"
-                        self.cursor.execute(delete_query, (product_id, ))
+
+                        delete_product_property_query = f"DELETE FROM product_property WHERE id = %s"
+                        self.cursor.execute(delete_product_property_query, (product_id,))
+
+                        delete_current_product_query = f"DELETE FROM {self.tab_name_cur} WHERE id = %s"
+                        self.cursor.execute(delete_current_product_query, (product_id,))
 
         elif self.row_data[1] == 'Перемещение товара на другой склад':
             self.deleted_row_ids = self.support_instance.delete_rows()
@@ -108,35 +112,18 @@ class UiOperationTableWindow(QtWidgets.QDialog):
                 for item_data in self.initial_result_data:
                     if item_data[0] == int(updated_row_id):
                         warehouse_id = item_data[2]
+                        product_id = item_data[1]
                         quantity = item_data[3]
-
-                        sql_prod_ids = (
-                            f"SELECT current_product_id FROM {self.tab_name_prop} "
-                            f"WHERE (current_product_name, expiration_date, article_number) IN "
-                            f"(SELECT current_product_name, expiration_date, article_number "
-                            f"FROM {self.tab_name_prop} WHERE current_product_id = ?)"
-                        )
-                        prop_ids = self.cursor.execute(sql_prod_ids, (updated_row_id,)).fetchall()
-
-                        sql_cur_id = (
-                            f"SELECT id FROM {self.tab_name_cur} "
-                            f"WHERE id IN ({','.join(['?'] * len(prop_ids))}) "
-                            f"AND warehouse_id = ?"
-                        )
-                        cur_id = self.cursor.execute(sql_cur_id,
-                                                     [row[0] for row in prop_ids] + [warehouse_id]).fetchall()
-
-                        sql_update = (
-                            f"UPDATE {self.tab_name_cur} SET quantity = "
-                            f"CASE WHEN id = ? AND warehouse_id = ? THEN quantity - ? "
-                            f"ELSE quantity + ? "
-                            f"END "
-                            f"WHERE (id = ? AND warehouse_id = ?) OR (id = ? AND warehouse_id = ?)"
-                        )
-                        self.cursor.execute(sql_update,
-                                            (updated_row_id, self.current_warehouse[0][0], quantity, quantity,
-                                             updated_row_id, self.current_warehouse[0][0],
-                                             cur_id[0][0], warehouse_id))
+                        select_query = f"SELECT current_product_id FROM {self.tab_name_cur} WHERE id = %s"
+                        self.cursor.execute(select_query, (product_id,))
+                        common_product_id = self.cursor.fetchone()
+                        update_query_pl = (f"UPDATE {self.tab_name_cur} SET quantity = "
+                                           f"quantity + %s WHERE warehouse_id = %s AND current_product_id = %s")
+                        self.cursor.execute(update_query_pl, (quantity, warehouse_id, common_product_id[0]))
+                        update_query_min = (f"UPDATE {self.tab_name_cur} SET quantity = "
+                                            f"0 WHERE warehouse_id = %s AND current_product_id = %s")
+                        self.cursor.execute(update_query_min, (self.current_warehouse[0][0],
+                                                               common_product_id[0]))
 
         if self.deleted_row_ids:
             self.enable_buttons()

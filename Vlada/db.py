@@ -49,7 +49,7 @@ def create_database():
             position_id INT NOT NULL,
             username VARCHAR(30) NOT NULL,
             password VARCHAR(30) NOT NULL,
-            FOREIGN KEY(position_id) REFERENCES Positions(id)
+            FOREIGN KEY(position_id) REFERENCES Positions(id) ON DELETE CASCADE
         )
     """)
 
@@ -61,8 +61,8 @@ def create_database():
             worker_id INT NOT NULL,
             time DATE NOT NULL,
             additional_characteristics VARCHAR(255),
-            FOREIGN KEY(client_id) REFERENCES Client(id),
-            FOREIGN KEY(worker_id) REFERENCES Worker(id)
+            FOREIGN KEY(client_id) REFERENCES Client(id) ON DELETE CASCADE,
+            FOREIGN KEY(worker_id) REFERENCES Worker(id) ON DELETE CASCADE
         )
     """)
 
@@ -87,8 +87,8 @@ def create_database():
             delivery_date DATE NOT NULL,
             expiration_date_operation DATE,
             destination VARCHAR(30),
-            FOREIGN KEY(delivery_id) REFERENCES Operation(id),
-            FOREIGN KEY(warehouse_id) REFERENCES Warehouse(id)
+            FOREIGN KEY(delivery_id) REFERENCES Operation(id) ON DELETE CASCADE,
+            FOREIGN KEY(warehouse_id) REFERENCES Warehouse(id) ON DELETE CASCADE
         )
     """)
 
@@ -102,7 +102,7 @@ def create_database():
             price INT NOT NULL,
             article_number INT NOT NULL,
             photo LONGBLOB,
-            FOREIGN KEY(id) REFERENCES Current_product(id)
+            FOREIGN KEY(id) REFERENCES Current_product(id) ON DELETE CASCADE
         )
     """)
 
@@ -114,8 +114,8 @@ def create_database():
             warehouse_id INT NOT NULL,
             quantity INT NOT NULL,
             condition_type VARCHAR(30) NOT NULL,
-            FOREIGN KEY(operation_id) REFERENCES Operation(id),
-            FOREIGN KEY(product_id) REFERENCES Product_property(id)
+            FOREIGN KEY(operation_id) REFERENCES Operation(id) ON DELETE CASCADE,
+            FOREIGN KEY(product_id) REFERENCES Product_property(id) ON DELETE CASCADE
         )
     """)
 
@@ -159,9 +159,9 @@ def generate_data():
             ('Списание товара', None, 3, '2024-03-20', None)
         ],
         'Current_product': [
-            (1, 10, 1, 1, '2024-03-01', '2024-03-17', None),
-            (2, 10, 1, 1, '2024-03-02', '2024-03-17', None),
-            (3, 10, 1, 1, '2024-03-03', '2024-03-17', None),
+            (1, 10, 3, 1, '2024-03-01', '2024-03-17', None),
+            (2, 10, 3, 1, '2024-03-02', '2024-03-17', None),
+            (3, 10, 3, 1, '2024-03-03', '2024-03-17', None),
             (4, 15, 2, 2, '2024-03-04', '2024-03-17', None),
             (5, 0, 2, 2, '2024-03-05', '2024-03-17', None),
             (6, 15, 2, 2, '2024-03-06', '2024-03-17', None),
@@ -173,7 +173,7 @@ def generate_data():
             (12, 0, 4, 2, '2024-03-12', '2024-03-17', None),
             (1, 10, 1, 2, '2024-03-01', '2024-03-17', None),
             (2, 5, 1, 2, '2024-03-02', '2024-03-17', None),
-            (3, 0, 1, 2, '2024-03-03', '2024-03-17', None)
+            (3, 5, 1, 2, '2024-03-03', '2024-03-17', None)
         ],
         'Product_property': [
             ('Товар 1', 'Категория 1', 'Характеристики', '2024-03-13', 100, 12340, None),
@@ -193,9 +193,9 @@ def generate_data():
             ('Товар 3', 'Категория 2', 'Характеристики', '2024-03-11', 100, 12342, None)
         ],
         'Operation_product': [
-            (1, 1, 2, 10, 'Доставлен'),
-            (1, 2, 2, 10, 'Доставлен'),
-            (1, 3, 2, 10, 'Доставлен'),
+            (3, 1, 2, 10, 'Доставлен'),
+            (3, 2, 2, 10, 'Доставлен'),
+            (3, 3, 2, 10, 'Доставлен'),
             (2, 4, 2, 11, 'На складе'),
             (2, 5, 2, 12, 'На складе'),
             (2, 6, 2, 12, 'На складе'),
@@ -205,9 +205,9 @@ def generate_data():
             (4, 10, 3, 14, 'Доставлен'),
             (4, 11, 1, 14, 'Доставлен'),
             (4, 12, 2, 14, 'Доставлен'),
-            (3, 13, 2, 20, 'Доставлен'),
-            (3, 14, 2, 15, 'Доставлен'),
-            (3, 15, 2, 10, 'Доставлен')
+            (1, 13, 2, 20, 'Доставлен'),
+            (1, 14, 2, 15, 'Доставлен'),
+            (1, 15, 2, 10, 'Доставлен')
         ]
     }
 

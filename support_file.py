@@ -24,6 +24,9 @@ class SupportClass:
         self.count_columns = None
         self.headers = None
         self.current_column_names = None
+        self.deleted_rows_op_pr = []
+        self.deleted_rows_prod_pr = []
+        self.deleted_rows_cur_pr = []
         self.column_names = {
             'Operation': ["Идентификатор", "Тип операции", "Имя клиента", "Имя сотрудника", "Время",
                           "Другие характеристики"],
@@ -272,6 +275,7 @@ class SupportClass:
         """
         selected_rows = self.table_widget.selectionModel().selectedRows()
         deleted_row_ids = []
+        deleted_rows_dict = {}
 
         if selected_rows:
             # Если выделены строки, то удаляем их
@@ -285,6 +289,30 @@ class SupportClass:
 
                 # Удаляем строку из базы данных, если id существует
                 if deleted_row_id is not None:
+                    if self.table_name == 'Operation':
+                        select_query = "SELECT * FROM Operation_product WHERE operation_id = %s"
+                        self.cursor.execute(select_query, (deleted_row_id,))
+                        self.deleted_rows_op_pr.append(self.cursor.fetchall())
+
+                        select_query = "SELECT product_id FROM Operation_product WHERE operation_id = %s"
+                        self.cursor.execute(select_query, (deleted_row_id,))
+                        prod_id = self.cursor.fetchall()
+
+                        prod_id_values = [row[0] for row in prod_id]
+                        placeholders_string = ', '.join(['%s'] * len(prod_id_values))
+
+                        select_query = f"SELECT * FROM Product_property WHERE id IN ({placeholders_string})"
+                        self.cursor.execute(select_query, prod_id_values)
+                        self.deleted_rows_prod_pr.append(self.cursor.fetchall())
+
+                        select_query = f"SELECT * FROM Current_product WHERE id IN ({placeholders_string})"
+                        self.cursor.execute(select_query, prod_id_values)
+                        self.deleted_rows_cur_pr.append(self.cursor.fetchall())
+
+                        deleted_rows_dict["Current_product"] = self.deleted_rows_cur_pr
+                        deleted_rows_dict["Product_property"] = self.deleted_rows_prod_pr
+                        deleted_rows_dict["Operation_product"] = self.deleted_rows_op_pr
+
                     delete_query = f"DELETE FROM {self.table_name} WHERE id = %s;"
                     self.cursor.execute(delete_query, (deleted_row_id,))
                     deleted_row_ids.append(deleted_row_id)
@@ -301,7 +329,7 @@ class SupportClass:
                     item.setText("")
             if selected_rows or selected_items:
                 show_notification("Удалены записи")
-        return deleted_row_ids
+        return deleted_row_ids, deleted_rows_dict
 
     @staticmethod
     def validate_item(item_text, name_col, initial_name_col):
@@ -380,7 +408,8 @@ class SupportClass:
         """
         Вставляет новую запись в базу данных
         """
-        insert_query = f"INSERT INTO {self.table_name} VALUES ({', '.join(['%s' for _ in range(len(new_data))])});"
+        insert_query = (f"INSERT IGNORE INTO {self.table_name} VALUES "
+                        f"({', '.join(['%s' for _ in range(len(new_data))])});")
         self.cursor.execute(insert_query, new_data)
         self.connection.commit()
 

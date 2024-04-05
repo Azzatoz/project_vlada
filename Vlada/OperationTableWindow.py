@@ -80,7 +80,7 @@ class UiOperationTableWindow(QtWidgets.QDialog):
 
     def return_product(self):
         if self.row_data[1] in ['Продажа товара', 'Списание товара']:
-            self.deleted_row_ids = self.support_instance.delete_rows()
+            self.deleted_row_ids, deleted_rows = self.support_instance.delete_rows()
 
             for added_row_id in self.deleted_row_ids:
                 for item_data in self.initial_result_data:
@@ -92,21 +92,18 @@ class UiOperationTableWindow(QtWidgets.QDialog):
                         self.cursor.execute(update_query, (quantity, product_id))
 
         elif self.row_data[1] == 'Принятие товара':
-            self.deleted_row_ids = self.support_instance.delete_rows()
+            self.deleted_row_ids, deleted_rows = self.support_instance.delete_rows()
 
             for deleted_row_id in self.deleted_row_ids:
                 for item_data in self.initial_result_data:
                     if item_data[0] == int(deleted_row_id):
                         product_id = item_data[1]
 
-                        delete_product_property_query = f"DELETE FROM product_property WHERE id = %s"
-                        self.cursor.execute(delete_product_property_query, (product_id,))
-
                         delete_current_product_query = f"DELETE FROM {self.tab_name_cur} WHERE id = %s"
                         self.cursor.execute(delete_current_product_query, (product_id,))
 
         elif self.row_data[1] == 'Перемещение товара на другой склад':
-            self.deleted_row_ids = self.support_instance.delete_rows()
+            self.deleted_row_ids, deleted_rows = self.support_instance.delete_rows()
 
             for updated_row_id in self.deleted_row_ids:
                 for item_data in self.initial_result_data:
@@ -145,7 +142,7 @@ class UiOperationTableWindow(QtWidgets.QDialog):
 
     def button_action(self, action_type):
         if action_type == "delete":
-            deleted_ids = self.support_instance.delete_rows()
+            deleted_ids, deleted_rows = self.support_instance.delete_rows()
             if deleted_ids:
                 self.enable_buttons()
         elif action_type == "save":

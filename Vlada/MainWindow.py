@@ -15,6 +15,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.initial_db_data = []
         self.change_db_data = []
         self.count_columns = None
+        self.deleted_data = None
         self.name_user = name_user
 
         self.connection = connection
@@ -193,6 +194,12 @@ class UiMainWindow(QtWidgets.QMainWindow):
             sql_insert = f"INSERT INTO {self.table_name} VALUES ({placeholders})"
             self.cursor.execute(sql_insert, deleted_rows_data)
 
+        for key, value in self.deleted_data.items():
+            placeholders = ', '.join(['%s'] * len(value[0][0]))
+            sql_insert_op_pr = f"INSERT IGNORE INTO {key} VALUES ({placeholders})"
+            for data_row in value:
+                self.cursor.executemany(sql_insert_op_pr, data_row)
+
         self.connection.commit()
         self.support_instance.display_table_data()
         show_notification("Отменены все изменения")
@@ -200,7 +207,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.cancel_button.setEnabled(False)
 
     def delete_and_enable_cancel_button(self):
-        deleted_ids = self.support_instance.delete_rows()
+        deleted_ids, self.deleted_data = self.support_instance.delete_rows()
         if deleted_ids:
             self.support_instance.save()
             self.cancel_button.setEnabled(True)

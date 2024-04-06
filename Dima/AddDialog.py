@@ -134,29 +134,6 @@ class Ui_AddDialog(QtWidgets.QDialog):
 
             # Закрываем диалоговое окно
             self.accept()
-        elif self.operation_type == "Переместить":
-            # Получаем данные о складе из полей ввода
-            name = self.lineEdit_name.text() != ""
-            address = self.lineEdit_surname.text() != ""
-            coordinates = self.lineEdit_patronymic.text().isdigit()
-            geolocation = self.lineEdit_phone.text().isdigit()
-
-            # Создаем подключение к базе данных
-            conn = sqlite3.connect('warehouse.db')
-            c = conn.cursor()
-
-            # Вставляем данные о складе в таблицу Warehouse
-            c.execute(
-                "INSERT INTO Warehouse (name, address, coordinates, geolocation) VALUES (?, ?, ?, ?)",
-                (name, address, coordinates, geolocation))
-
-            conn.commit()
-            conn.close()
-            # Отправляем сигнал о добавлении данных
-            self.data_added.emit()
-            # Закрываем диалоговое окно
-            self.accept()
-
 
 if __name__ == "__main__":
     import sys

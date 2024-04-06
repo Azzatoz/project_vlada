@@ -17,20 +17,46 @@ class OperationDialogController:
         self.table_widget = table_widget
         self.info_line = info_line
 
-    # Метод для списания товара
-    def write_off_product(self):
+    def add_or_delete_product(self):
+        """
+        Добавляет или удаляет товар на складе в зависимости от значений столбцов таблицы.
+        """
         # Получаем список выделенных строк
+        new_quantity = None
         selected_rows = set()
         for item in self.table_widget.selectedItems():
             selected_rows.add(item.row())
 
-        # Если нет выделенных строк, выходим из метода
-        if not selected_rows:
-            show_notification("Выберите товар на списание")
-            return
+        # Проходим по выделенным строкам
+        for row in selected_rows:
+            # Получаем данные из столбцов 4 и 5
+            quantity_in_warehouse_item = self.table_widget.item(row, 3)
+            quantity_to_add_item = self.table_widget.item(row, 4)
 
-        # Вызываем метод delete_rows для удаления выделенных строк
-        self.support_instance.delete_rows()
+            # Проверяем, что оба столбца не пустые
+            if quantity_in_warehouse_item is not None and quantity_to_add_item is not None:
+                # Получаем значения из ячеек
+                quantity_in_warehouse = int(quantity_in_warehouse_item.text())
+                quantity_to_add = int(quantity_to_add_item.text())
+
+                # Проверяем тип операции
+                if self.operation_type == "Списать":
+                    # Если операция "Списать", вычитаем количество товара
+                    new_quantity = quantity_in_warehouse - quantity_to_add
+                elif self.operation_type == "Принять":
+                    # Если операция "Принять", добавляем количество товара
+                    new_quantity = quantity_in_warehouse + quantity_to_add
+
+                # Проверяем, что количество для добавления неотрицательное
+                if quantity_to_add >= 0:
+                    # Обновляем значение в столбце 4
+                    quantity_in_warehouse_item.setText(str(new_quantity))
+                else:
+                    # Если количество для добавления отрицательное, выводим сообщение об ошибке
+                    show_notification("Количество для добавления должно быть неотрицательным.")
+            else:
+                # Если хотя бы один из столбцов пустой, выводим сообщение об ошибке
+                show_notification("Заполните оба столбца перед выполнением операции.")
 
     # TODO: добавить в support_file
     def get_selected_items(self):
@@ -119,7 +145,6 @@ class OperationDialogController:
                     self.info_line.setText(
                         "Ошибка: Количество для операции превышает общее количество товара на складе.")
                     return
-
             self.connection.commit()
         except mysql.connector.Error as e:
             self.info_line.setText("Ошибка при записи данных операции в базу данных: " + str(e))

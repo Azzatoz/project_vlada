@@ -209,8 +209,8 @@ class Ui_AuthorizationWindow(object):
                 return
 
             # Получение ID должности "Новый пользователь"
-            self.cursor.execute("SELECT id FROM Position WHERE name_position = 'Новый пользователь'")
-            position_id = cursor.fetchone()[0]
+            self.cursor.execute("SELECT id FROM Positions WHERE name_position = 'Новый пользователь'")
+            position_id = self.cursor.fetchone()[0]
 
             # Вставка данных нового пользователя в таблицу Worker
             self.cursor.execute(

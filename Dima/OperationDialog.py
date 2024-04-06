@@ -11,9 +11,11 @@ from support_file import show_notification
 #  сделать функцию принять товар чтобы пользователь вписывал
 #  или выбирал дату поставки и количество товара добавить на товар
 #  примерно тоже самое сделать для функции переместить товар
+#  изменить передачу connection на cursor (везде)
 
 
 def create_word_document(operation_type, worker_name, selected_destination, selected_items, current_time):
+    table = None
     document = docx.Document()
 
     # Заголовок документа
@@ -223,7 +225,8 @@ class Ui_OperationDialog(object):
 
             # Добавление нового столбца в заголовок таблицы
             operation_column_title = "Количество на " + self.operation_type.lower()
-            headers = ['ID', 'ID_товара', 'Наименование', 'Количество на складе', operation_column_title, 'Поставки', 'Склад',
+            headers = ['ID', 'ID_товара', 'Наименование', 'Количество на складе', operation_column_title, 'Поставки',
+                       'Склад',
                        'Дата поставки']
             num_cols = len(headers)
             self.table_widget.setColumnCount(num_cols)
@@ -237,7 +240,7 @@ class Ui_OperationDialog(object):
 
                 # Создание элементов QTableWidgetItem для каждого столбца
                 item_id = QtWidgets.QTableWidgetItem(str(product_id))
-                item_current_product_id =QtWidgets.QTableWidgetItem(str(current_product_id))
+                item_current_product_id = QtWidgets.QTableWidgetItem(str(current_product_id))
                 item_name = QtWidgets.QTableWidgetItem(str(product_name))
                 item_quantity = QtWidgets.QTableWidgetItem(str(quantity))
                 item_operator = QtWidgets.QTableWidgetItem(operator_names[row_index])
@@ -273,15 +276,19 @@ class Ui_OperationDialog(object):
         Сохраняет данные операции в базу данных и обновляет информацию о товарах.
         """
         # Получаем тип операции и текущее время
+        selected_destination = None
         import datetime
-        operation_type = self.operation_type
         current_time = datetime.datetime.now().strftime("%Y-%m-%d")
 
         # Получаем идентификатор работника
         worker_id = self.controller.get_worker_id(self.worker_name)
 
-        # Получаем выбранный элемент из comboBox
-        selected_destination = self.choose_comboBox.currentText()
+        # Получаем выбранный элемент в зависимости от типа операции
+        if self.operation_type in ["Продать", "Переместить"]:
+            selected_destination = self.choose_comboBox.currentText()
+        elif self.operation_type in ["Принять", "Списать"]:
+            selected_destination = self.table_widget.item(self.table_widget.currentRow(),
+                                                          6).text()
 
         # Получаем идентификатор клиента или склада
         client_or_warehouse_id = self.controller.get_client_or_warehouse_id(selected_destination)
@@ -292,7 +299,9 @@ class Ui_OperationDialog(object):
             show_notification("Выберите товары для операции")
             return
 
-        self.controller.insert_operation_data(operation_type, client_or_warehouse_id, worker_id, current_time,
+        self.controller.add_or_delete_product()
+
+        self.controller.insert_operation_data(self.operation_type, client_or_warehouse_id, worker_id, current_time,
                                               additional_characteristics=None, selected_items=selected_items)
 
         # Обновляем информацию о товарах и складе
@@ -332,11 +341,12 @@ class Ui_OperationDialog(object):
         from Vlada.MainWindow import UiMainWindow
         # mainWindow_instance = UiMainWindow(self.worker_name, self.connection)
         # Подключение событий к обработчикам
+        if operation_type == ["Списать", "Принять"]:
+            self.choose_comboBox.hide()
+            self.save_button.clicked.connect(self.controller.add_or_delete_product)
         self.save_button.clicked.connect(self.save_operation_data)
         # self.cancel_button.clicked.connect(mainWindow_instance.cancel_deletion_row)
-        if operation_type == "Списать":
-            self.choose_comboBox.clicked.connect(self.controller.write_off_product)
-        elif operation_type in ["Продать", "Переместить"]:
+        if operation_type == ["Продать", "Переместить"]:
             self.populateComboBox()
 
     def handle_cell_changed(self, row, column):
@@ -393,5 +403,5 @@ if __name__ == "__main__":
         database='warehouse'
     )
     app = QtWidgets.QApplication(sys.argv)
-    ui = Ui_OperationDialog("Продать", conn, "Иван Иванов")
+    ui = Ui_OperationDialog("Списать", conn, "Иван Иванов")
     sys.exit(app.exec_())

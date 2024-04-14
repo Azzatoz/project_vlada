@@ -81,35 +81,25 @@ class OperationDialogController:
         return selected_items
 
     def get_worker_id(self, worker_name):
-        try:
-            self.cursor.execute("SELECT id FROM Worker WHERE name=%s", (worker_name,))
-            worker_row = self.cursor.fetchone()
-            if worker_row:
-                return worker_row[0]
-            else:
-                self.info_line.setText(f"Работник с именем '{worker_name}' не найден.")
-                return None
-        except sqlite3.Error as e:
-            self.info_line.setText("Ошибка при получении идентификатора работника: " + str(e))
+        self.cursor.execute("SELECT id FROM Worker WHERE name=%s", (worker_name,))
+        worker_row = self.cursor.fetchone()
+        if worker_row:
+            return worker_row[0]
+        else:
+            self.info_line.setText(f"Работник с именем '{worker_name}' не найден.")
             return None
 
     def get_client_or_warehouse_id(self, selected_destination):
-        try:
-            if self.operation_type == "Продать":
-                self.cursor.execute("SELECT id FROM Client WHERE name=%s", (selected_destination,))
-            else:
-                self.cursor.execute("SELECT id FROM Warehouse WHERE name=%s", (selected_destination,))
-            client_or_warehouse_row = self.cursor.fetchone()
-            if client_or_warehouse_row:
-                return client_or_warehouse_row[0]
-            else:
-                self.info_line.setText(
-                    f"{'' if self.operation_type == 'Продать' else 'Склад '}с именем '{selected_destination}' не найден.")
-                return None
-        except sqlite3.Error as e:
+        if self.operation_type == "Продать":
+            self.cursor.execute("SELECT id FROM Client WHERE name=%s", (selected_destination,))
+        else:
+            self.cursor.execute("SELECT id FROM Warehouse WHERE name=%s", (selected_destination,))
+        client_or_warehouse_row = self.cursor.fetchone()
+        if client_or_warehouse_row:
+            return client_or_warehouse_row[0]
+        else:
             self.info_line.setText(
-                f"Ошибка при получении идентификатора {'клиента' if self.operation_type == 'Продать' else 'склада'}: " + str(
-                    e))
+                f"{'' if self.operation_type == 'Продать' else 'Склад '}с именем '{selected_destination}' не найден.")
             return None
 
     def get_warehouse_id(self, warehouse_name):
@@ -122,7 +112,8 @@ class OperationDialogController:
     def insert_operation_data(self, operation_type, client_or_warehouse_id, worker_id, current_time,
                               additional_characteristics, selected_items):
         try:
-            # Вставляем данные операции в таблицу
+            if operation_type != 'Продать':
+                client_or_warehouse_id = None
             self.cursor.execute(
                 "INSERT INTO Operation (type, client_id, worker_id, time, additional_characteristics) "
                 "VALUES (%s, %s, %s, %s, %s)",

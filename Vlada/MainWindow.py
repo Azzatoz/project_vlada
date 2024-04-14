@@ -1,10 +1,12 @@
 from functools import partial
-from Dima.OperationWindow import Ui_OperationWindow
+from Dima.OperationDialog import Ui_OperationDialog
 from Vlada.OperationTableWindow import UiOperationTableWindow
 from Vlada.StandardDataWindow import UiStandardDataWindow
+from Vlada.DocumentWindow import UiDocumentWindow
 from support_file import SupportClass
 from support_file import show_notification
 from PyQt5 import QtCore, QtWidgets
+import mysql.connector
 
 
 class UiMainWindow(QtWidgets.QMainWindow):
@@ -130,9 +132,10 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.open_client_btn.clicked.connect(partial(self.open_standard_data_window, 'Client'))
         self.open_warehouse_btn.clicked.connect(partial(self.open_standard_data_window, 'Warehouse'))
         self.open_position_btn.clicked.connect(partial(self.open_standard_data_window, 'Positions'))
+        self.open_document_btn.clicked.connect(self.open_document_window)
 
     def open_operation_window(self, operation):
-        operation_window = Ui_OperationWindow(operation, self.connection, self.name_user)
+        operation_window = Ui_OperationDialog(operation, self.connection, self.name_user)
         operation_window.show()
         UiMainWindow.operation_window_instance = operation_window
 
@@ -140,6 +143,12 @@ class UiMainWindow(QtWidgets.QMainWindow):
         standard_data_window = UiStandardDataWindow(table_name, self.connection)
         standard_data_window.show()
         UiMainWindow.standard_data_window_instance = standard_data_window
+
+    @staticmethod
+    def open_document_window():
+        document_window = UiDocumentWindow()
+        document_window.show()
+        UiMainWindow.document_window_instance = document_window
 
     def open_operation_table_window(self):
         selected_row = self.table_widget.currentRow()
@@ -219,7 +228,12 @@ class UiMainWindow(QtWidgets.QMainWindow):
 if __name__ == "__main__":
     import sys
     user_name = None
-    conn = None
+    conn = mysql.connector.connect(
+        host='localhost',
+        user='root',
+        password='12345',
+        database='warehouse'
+    )
     app = QtWidgets.QApplication(sys.argv)
     ui = UiMainWindow(user_name, conn)
     ui.show()

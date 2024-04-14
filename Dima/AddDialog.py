@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 import sqlite3
+import mysql.connector
 
 
 class Ui_AddDialog(QtWidgets.QDialog):
@@ -118,11 +119,16 @@ class Ui_AddDialog(QtWidgets.QDialog):
             full_name = " ".join(filter(None, [surname, name, patronymic]))
 
             # Создаем подключение к базе данных
-            conn = sqlite3.connect('warehouse.db')
+            conn = mysql.connector.connect(
+                host='localhost',
+                user='root',
+                password='12345',
+                database='warehouse'
+            )
             c = conn.cursor()
 
             # Вставляем данные о клиенте в таблицу Client
-            c.execute("INSERT INTO Client (name, phone_number, json_note) VALUES (?, ?, ?)",
+            c.execute("INSERT INTO Client (name, phone_number, json_note) VALUES (%s, %s, %s)",
                       (full_name, phone, json_note))
 
             # Сохраняем изменения в базе данных
@@ -139,6 +145,6 @@ if __name__ == "__main__":
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
-    dialog = AddDialog()
+    dialog = Ui_AddDialog()
     dialog.exec_()
     sys.exit(app.exec_())

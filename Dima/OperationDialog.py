@@ -1,6 +1,11 @@
 import mysql.connector
+import datetime
 import docx
+import os
+from docxtpl import DocxTemplate
 from PyQt5 import QtCore, QtWidgets
+from openpyxl.reader.excel import load_workbook
+
 from Dima.AddDialog import Ui_AddDialog
 from Dima.OperationDialogController import OperationDialogController
 from support_file import SupportClass
@@ -13,52 +18,6 @@ from support_file import show_notification
 #  примерно тоже самое сделать для функции переместить товар
 #  изменить передачу connection на cursor (везде)
 
-
-def create_word_document(operation_type, worker_name, selected_destination, selected_items, current_time):
-    table = None
-    document = docx.Document()
-
-    # Заголовок документа
-    document.add_heading(f"Отчет по операции '{operation_type}'", level=1)
-
-    # Добавляем информацию о дате и времени операции, работнике и месте назначения
-    document.add_paragraph(f"Дата и время операции: {current_time}")
-    document.add_paragraph(f"Выполнил: {worker_name}")
-    destination_type = "Клиент" if operation_type == "Продать" else "Склад"
-    document.add_paragraph(f"{destination_type}: {selected_destination}")
-
-    # Флаг для отслеживания, были ли уже добавлены заголовки таблицы
-    headers_added = False
-
-    # Добавляем данные операции в документ
-    for selected_row_data in selected_items:
-        # Создаем таблицу и добавляем заголовки только один раз
-        if not headers_added:
-            table = document.add_table(rows=1, cols=4)
-            table.autofit = True
-            hdr_cells = table.rows[0].cells
-            hdr_cells[0].text = 'ID товара'
-            hdr_cells[1].text = 'Наименование товара'
-            hdr_cells[2].text = 'Количество'
-            hdr_cells[3].text = 'Цена'
-            headers_added = True
-
-        # Добавляем данные товара в таблицу
-        row_cells = table.add_row().cells
-        row_cells[0].text = selected_row_data[0]  # ID товара на складе
-        row_cells[1].text = selected_row_data[1]  # Наименование товара
-        row_cells[2].text = selected_row_data[2]  # Количество
-        row_cells[3].text = selected_row_data[3]  # Цена
-
-    # Сохраняем документ
-    document_path = f"{operation_type}_report_{current_time}.docx"
-    document.save(document_path)
-
-    # Открываем созданный документ
-    import os
-    os.startfile(document_path)
-
-
 class Ui_OperationDialog(object):
     def __init__(self, operation, connection, worker_name):
 
@@ -69,6 +28,10 @@ class Ui_OperationDialog(object):
         self.cursor = self.connection.cursor()
         self.operation_type = operation
         self.table_name = "Current_product"
+        self.document_word = None
+        self.paths_txt = "C:\\Users\\user\\PycharmProjects\\project_vlada\\paths.txt"
+        self.index_path_word = 6
+        self.index_path_excel = 7
 
         self.operationDialog = QtWidgets.QDialog()
         self.operationDialog.setObjectName("operationDialog")
@@ -193,6 +156,148 @@ class Ui_OperationDialog(object):
     def show(self):
         self.operationDialog.show()
 
+    def load_paths(self):
+        paths = []
+        if os.path.exists(self.paths_txt):
+            with open(self.paths_txt, 'r') as file:
+                paths = [line.strip() for line in file if line.strip()]
+        return paths
+
+    def fetch_client_or_warehouse(self, operation_type, client_or_warehouse_id):
+        if operation_type == 'Продать':
+            self.cursor.execute("SELECT name FROM Client WHERE id=%s", (client_or_warehouse_id,))
+            name_client = self.cursor.fetchone()
+            return name_client[0]
+        elif operation_type == 'Переместить':
+            self.cursor.execute("SELECT name FROM Warehouse WHERE id=%s", (client_or_warehouse_id,))
+            name_warehouse = self.cursor.fetchone()
+            return name_warehouse[0]
+
+    def fetch_price(self, product_id):
+        self.cursor.execute("SELECT price FROM Product_property WHERE id=%s", (product_id,))
+        price = self.cursor.fetchone()
+        return price[0]
+
+    def create_word_document(self, operation_type, worker_name, client_or_warehouse_id, selected_items):
+        current_datetime = datetime.datetime.now()
+        context = {
+            'date_time': current_datetime,
+            'person': worker_name
+        }
+        for selected_row_data in selected_items:
+            if operation_type == 'Списать':
+                context['warehouse'] = selected_row_data[6]
+                self.index_path_word = 2
+            elif operation_type == 'Продать':
+                context['warehouse'] = selected_row_data[6]
+                context['client'] = self.fetch_client_or_warehouse(operation_type, client_or_warehouse_id)
+                self.index_path_word = 0
+            elif operation_type == 'Переместить':
+                context['warehouse'] = self.fetch_client_or_warehouse(operation_type, client_or_warehouse_id)
+                self.index_path_word = 4
+
+        paths_from_file = self.load_paths()
+        path = paths_from_file[self.index_path_word]
+        self.document_word = DocxTemplate(path)
+        self.document_word.render(context)
+
+        # Создаем таблицу один раз перед циклом
+        if operation_type == 'Переместить':
+            table = self.document_word.add_table(rows=1, cols=5)
+        else:
+            table = self.document_word.add_table(rows=1, cols=4)
+        table.autofit = True
+        hdr_cells = table.rows[0].cells
+        hdr_cells[0].text = 'Наименование'
+        hdr_cells[1].text = 'Количество'
+        hdr_cells[2].text = 'Цена'
+
+        if operation_type == 'Принять':
+            hdr_cells[3].text = 'Склад, на который принят товар'
+        elif operation_type == 'Переместить':
+            hdr_cells[3].text = 'Склад, с которого перемещен товар'
+            hdr_cells[4].text = 'Дата поставки'
+        elif operation_type in ['Продать', 'Списать']:
+            hdr_cells[3].text = 'Дата поставки'
+
+        # Добавляем строки в таблицу в цикле
+        for selected_row_data in selected_items:
+            row_cells = table.add_row().cells
+            row_cells[0].text = selected_row_data[2]
+            row_cells[1].text = selected_row_data[4]
+            row_cells[2].text = str(self.fetch_price(selected_row_data[0]))
+
+            if operation_type == 'Принять':
+                row_cells[3].text = selected_row_data[6]
+            elif operation_type == 'Переместить':
+                row_cells[3].text = selected_row_data[6]
+                row_cells[4].text = selected_row_data[7]
+            elif operation_type in ['Продать', 'Списать']:
+                row_cells[3].text = selected_row_data[7]
+
+        table.style = 'Table Grid'
+        document_path = f"{operation_type}_{current_datetime.strftime('%Y-%m-%d_%H-%M-%S')}.docx"
+        self.document_word.save(document_path)
+
+        os.startfile(document_path)
+
+    def create_excel_document(self, operation_type, worker_name, client_or_warehouse_id, selected_items):
+        current_datetime = datetime.datetime.now()
+        column_index = 2
+        row_index = 9
+
+        if operation_type == 'Списать':
+            self.index_path_excel = 3
+            row_index = 10
+        elif operation_type == 'Продать':
+            self.index_path_excel = 1
+            row_index = 11
+        elif operation_type == 'Переместить':
+            self.index_path_excel = 5
+            row_index = 11
+
+        paths_from_file = self.load_paths()
+        path = paths_from_file[self.index_path_excel]
+        workbook = load_workbook(path)
+        sheet = workbook.active
+
+        # Заполнение таблицы данными
+        for selected_row_data in selected_items:
+            sheet.cell(row=row_index, column=column_index).value = selected_row_data[2]
+            sheet.cell(row=row_index, column=column_index + 1).value = selected_row_data[4]
+            sheet.cell(row=row_index, column=column_index + 2).value = self.fetch_price(selected_row_data[0])
+
+            if operation_type == 'Принять':
+                sheet.cell(row=row_index, column=column_index + 3).value = selected_row_data[6]
+            elif operation_type == 'Переместить':
+                sheet.cell(row=row_index, column=column_index + 3).value = selected_row_data[6]
+                sheet.cell(row=row_index, column=column_index + 4).value = selected_row_data[7]
+            elif operation_type in ['Продать', 'Списать']:
+                sheet.cell(row=row_index, column=column_index + 3).value = selected_row_data[7]
+
+            row_index += 1
+
+        sheet.cell(row=5, column=3).value = current_datetime
+        sheet.cell(row=6, column=3).value = worker_name
+
+        for selected_row_data in selected_items:
+            if operation_type == 'Списать':
+                sheet.cell(row=7, column=3).value = selected_row_data[6]
+            elif operation_type == 'Продать':
+                sheet.cell(row=7, column=3).value = selected_row_data[6]
+                sheet.cell(row=8, column=3).value = self.fetch_client_or_warehouse(
+                    operation_type, client_or_warehouse_id)
+            elif operation_type == 'Переместить':
+                sheet.cell(row=7, column=3).value = self.fetch_client_or_warehouse(
+                    operation_type, client_or_warehouse_id)
+
+        # Сохранение документа Excel
+        document_path = f"{operation_type}_{current_datetime.strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
+        workbook.save(document_path)
+
+        # Открытие документа
+        os.startfile(document_path)
+
     def display_current_product_data(self):
         try:
             # SQL-запрос для получения данных о товарах на складе
@@ -309,7 +414,10 @@ class Ui_OperationDialog(object):
 
         # Проверяем состояние чекбокса для создания Word документа
         if self.check_word.isChecked():
-            create_word_document(operation_type, self.worker_name, selected_destination, selected_items, current_time)
+            self.create_word_document(self.operation_type, self.worker_name, client_or_warehouse_id, selected_items)
+
+        if self.check_excel.isChecked():
+            self.create_excel_document(self.operation_type, self.worker_name, client_or_warehouse_id, selected_items)
 
         # После сохранения операции вызываем метод для отображения данных
         self.display_current_product_data()
@@ -341,12 +449,12 @@ class Ui_OperationDialog(object):
         from Vlada.MainWindow import UiMainWindow
         # mainWindow_instance = UiMainWindow(self.worker_name, self.connection)
         # Подключение событий к обработчикам
-        if operation_type == ["Списать", "Принять"]:
+        if operation_type in ["Списать", "Принять"]:
             self.choose_comboBox.hide()
             self.save_button.clicked.connect(self.controller.add_or_delete_product)
         self.save_button.clicked.connect(self.save_operation_data)
         # self.cancel_button.clicked.connect(mainWindow_instance.cancel_deletion_row)
-        if operation_type == ["Продать", "Переместить"]:
+        if operation_type in ["Продать", "Переместить"]:
             self.populateComboBox()
 
     def handle_cell_changed(self, row, column):

@@ -132,7 +132,6 @@ class UiOperationTableWindow(QtWidgets.QDialog):
         self.cursor.execute(sql_warehouse)
         warehouse_result = self.cursor.fetchall()
         self.current_warehouse = warehouse_result if warehouse_result is not None else []
-
         self.data_edit.setPlainText(f"Тип проведенной операции: {self.row_data[1]}\n"
                                     f"Текущий склад: {self.current_warehouse[0][0]}\n"
                                     f"Клиент, который запросил операцию: {client}\n"
